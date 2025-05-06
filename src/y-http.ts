@@ -5,8 +5,7 @@ interface Connection {}
 
 interface HttpApi {
     open?: (url: string) => Promise<Connection>,
-    // TODO: send actually returns updates
-    send: (url: string, connection: Connection, data?: Uint8Array[]) => Promise<void>,
+    send: (url: string, connection: Connection, data?: Uint8Array[]) => Promise<Uint8Array[]>,
 }
 
 interface Events {
@@ -30,13 +29,16 @@ export class HttpProvider extends ObservableV2<Events> {
         this.doc = doc
         this.#remoteDoc = new Y.Doc()
         this.api = api
-        this.triggerSend = (_update?: Uint8Array) => {
+        this.triggerSend = async (_update?: Uint8Array) => {
             if (this.connection) {
-                this.api.send(
+                const updates = await this.api.send(
                     this.url,
                     this.connection,
                     [ this.syncUpdate ],
                 )
+                ;(updates || []).forEach(update => {
+                    Y.applyUpdateV2(this.doc, update)
+                })
             } else {
                 this.pendingSend = true
             }

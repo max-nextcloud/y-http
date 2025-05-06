@@ -61,6 +61,15 @@ test('sends updates', async () => {
         .toHaveBeenCalledWith('url', connection, anyUpdates)
 })
 
+test('exposes updates', () => {
+    const provider = new HttpProvider('url', new Y.Doc(), api)
+    const map = provider.doc.getMap()
+    map.set('hello', 'world')
+    const dest = new Y.Doc()
+    Y.applyUpdateV2(dest, provider.syncUpdate)
+    expect(dest.getMap().get('hello')).toBe('world')
+})
+
 test('sends pending updates after connecting', async () => {
     const connection = {}
     api.open.mockResolvedValue(connection)
@@ -71,6 +80,24 @@ test('sends pending updates after connecting', async () => {
     await provider.connect()
     expect(api.send)
         .toHaveBeenCalledWith('url', connection, anyUpdates)
+})
+
+test('applies updates received after from send', async () => {
+    const connection = {}
+    const source = new Y.Doc()
+    const sourceMap = source.getMap()
+    sourceMap.set('hi', 'there')
+    const update = Y.encodeStateAsUpdateV2(source)
+    api.open.mockResolvedValue(connection)
+    api.send.mockResolvedValue([update])
+    const provider = new HttpProvider('url', new Y.Doc(), api)
+    const map = provider.doc.getMap()
+    map.set('hello', 'world')
+    expect(provider.syncUpdate).toBeTruthy
+    await provider.connect()
+    expect(api.send)
+        .toHaveBeenCalledWith('url', connection, anyUpdates)
+    expect(map.get('hi')).toBe('there')
 })
 
 test('Setting values on a YMap', () => {
