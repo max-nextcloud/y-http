@@ -1,0 +1,3 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`receiving data 1`] = `"<paragraph>Hi</paragraph>"`;
