@@ -15,7 +15,7 @@ beforeEach(() =>
     vi.resetAllMocks()
 )
 
-const anyUpdates = [ expect.any(Uint8Array) ]
+const anyUpdates = [ expect.any(String) ]
 
 test('Instantiating the provider with a doc', () => {
     const doc = new Y.Doc()
@@ -59,6 +59,11 @@ test('sends updates', async () => {
     map.set('hello', 'world')
     expect(api.send)
         .toHaveBeenCalledWith('url', connection, anyUpdates)
+    const updates = api.send.mock.lastCall?.[2]
+    expect(updates.length).toBe(1)
+    const dest = new Y.Doc()
+    receive(dest, updates[0])
+    expect(dest.getMap().get('hello')).toBe('world')
 })
 
 test('exposes updates', () => {
@@ -66,7 +71,7 @@ test('exposes updates', () => {
     const map = provider.doc.getMap()
     map.set('hello', 'world')
     const dest = new Y.Doc()
-    Y.applyUpdateV2(dest, provider.syncUpdate)
+    receive(dest, provider.syncUpdate)
     expect(dest.getMap().get('hello')).toBe('world')
 })
 
@@ -83,30 +88,24 @@ test('sends pending updates after connecting', async () => {
 })
 
 test('applies updates received after from send', async () => {
+    const data = "AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA=="
+    const data2 = "AAISAQHYidydCwOE2IncnQsCAWkA"
     const connection = {}
-    const source = new Y.Doc()
-    const sourceMap = source.getMap()
-    sourceMap.set('hi', 'there')
-    const update = Y.encodeStateAsUpdateV2(source)
     api.open.mockResolvedValue(connection)
-    api.send.mockResolvedValue([update])
+    api.send.mockResolvedValue([data, data2])
     const provider = new HttpProvider('url', new Y.Doc(), api)
-    const map = provider.doc.getMap()
-    map.set('hello', 'world')
+    const map = provider.doc.getMap().set('hello', 'world')
     expect(provider.syncUpdate).toBeTruthy
     await provider.connect()
     expect(api.send)
         .toHaveBeenCalledWith('url', connection, anyUpdates)
-    expect(map.get('hi')).toBe('there')
+    expect(provider.doc.getXmlFragment('default'))
+        .toMatchInlineSnapshot(`"<paragraph>Hi</paragraph>"`)
+    // FIXME: each received update triggers send again
+    // expect(api.send).toHaveBeenCalledOnce()
 })
 
-test('Setting values on a YMap', () => {
-    const doc = new Y.Doc()
-    const map = doc.getMap()
-    expect(map.get('hello')).toBeUndefined
-    map.set('hello', 'world')
-    expect(map.get('hello')).toEqual('world')
-})
+// TODO: Check we do not resend received updates
 
 test('Setting values on a XmlFragment', () => {
     const ydoc = new Y.Doc()
@@ -166,16 +165,7 @@ test('using send with y-protocols', () => {
     expect(data.slice(0, 3)).toMatchInlineSnapshot(`"AAI"`)
 })
 
-test('receiving data', () => {
-    const dest = new Y.Doc()
-    const data = "AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA=="
-    const data2 = "AAISAQHYidydCwOE2IncnQsCAWkA"
-    apply(dest, data)
-    apply(dest, data2)
-    expect(dest.getXmlFragment('default')).toMatchSnapshot()
-})
-
-function apply(dest: Y.Doc, data: string) {
+function receive(dest: Y.Doc, data: string) {
     const dec = new Decoder(fromBase64(data))
     expect(readUint8(dec)).toBe(0)
     expect(readUint8(dec)).toBe(2)

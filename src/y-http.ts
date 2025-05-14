@@ -1,11 +1,15 @@
+import { fromBase64, toBase64 } from 'lib0/buffer.js'
+import { Decoder, readUint8 } from 'lib0/decoding.js'
+import { Encoder, toUint8Array, writeVarUint } from 'lib0/encoding.js'
 import { ObservableV2 } from 'lib0/observable.js'
+import { readUpdate, writeUpdate } from 'y-protocols/sync.js'
 import * as Y from 'yjs'
 
 interface Connection {}
 
 interface HttpApi {
     open?: (url: string) => Promise<Connection>,
-    send: (url: string, connection: Connection, data?: Uint8Array[]) => Promise<Uint8Array[]>,
+    send: (url: string, connection: Connection, data?: string[]) => Promise<string[]>,
 }
 
 interface Events {
@@ -37,7 +41,11 @@ export class HttpProvider extends ObservableV2<Events> {
                     [ this.syncUpdate ],
                 )
                 ;(updates || []).forEach(update => {
-                    Y.applyUpdateV2(this.doc, update)
+                    const dec = new Decoder(fromBase64(update))
+                    readUint8(dec) // 0 = sync protocol
+                    readUint8(dec) // 2 = update
+                    // readUpdate(dec, this.#remoteDoc, this)
+                    readUpdate(dec, this.doc, this)
                 })
             } else {
                 this.pendingSend = true
@@ -48,9 +56,11 @@ export class HttpProvider extends ObservableV2<Events> {
     }
 
     get syncUpdate() {
-        // TODO: encode a proper message,
-        // TODO: Maybe return undefined if no update
-        return Y.encodeStateAsUpdateV2(this.doc, Y.encodeStateVector(this.#remoteDoc))
+        const update = Y.encodeStateAsUpdate(this.doc, Y.encodeStateVector(this.#remoteDoc))
+        const enc = new Encoder()
+        writeVarUint(enc, 0) // sync protocol
+        writeUpdate(enc, update)
+        return toBase64(toUint8Array(enc))
     }
 
     async connect(): Promise<void> {
