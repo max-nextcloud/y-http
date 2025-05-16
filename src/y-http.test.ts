@@ -92,17 +92,17 @@ test('applies updates received after from send', async () => {
     const data2 = "AAISAQHYidydCwOE2IncnQsCAWkA"
     const connection = {}
     api.open.mockResolvedValue(connection)
-    api.send.mockResolvedValue([data, data2])
+    const spy = vi.spyOn(api, 'send')
+        .mockImplementation((_url, _con, updates) => [data, data2, ...updates])
     const provider = new HttpProvider('url', new Y.Doc(), api)
-    const map = provider.doc.getMap().set('hello', 'world')
+    provider.doc.getMap().set('hello', 'world')
     expect(provider.syncUpdate).toBeTruthy
     await provider.connect()
     expect(api.send)
         .toHaveBeenCalledWith('url', connection, anyUpdates)
     expect(provider.doc.getXmlFragment('default'))
         .toMatchInlineSnapshot(`"<paragraph>Hi</paragraph>"`)
-    // FIXME: each received update triggers send again
-    // expect(api.send).toHaveBeenCalledOnce()
+    expect(spy).toHaveBeenCalledOnce()
 })
 
 // TODO: Check we do not resend received updates

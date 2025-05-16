@@ -23,7 +23,7 @@ export class HttpProvider extends ObservableV2<Events> {
     #remoteDoc: Y.Doc
     api: HttpApi
     connection?: Connection
-    triggerSend?: (update?: Uint8Array) => void
+    #triggerSend?: (update?: Uint8Array) => void
     // TODO: drop in favor of checking for updates
     pendingSend = false
 
@@ -33,7 +33,7 @@ export class HttpProvider extends ObservableV2<Events> {
         this.doc = doc
         this.#remoteDoc = new Y.Doc()
         this.api = api
-        this.triggerSend = async (_update?: Uint8Array) => {
+        this.#triggerSend = async (_update?: Uint8Array) => {
             if (this.connection) {
                 const updates = await this.api.send(
                     this.url,
@@ -41,26 +41,36 @@ export class HttpProvider extends ObservableV2<Events> {
                     [ this.syncUpdate ],
                 )
                 ;(updates || []).forEach(update => {
-                    const dec = new Decoder(fromBase64(update))
-                    readUint8(dec) // 0 = sync protocol
-                    readUint8(dec) // 2 = update
-                    // readUpdate(dec, this.#remoteDoc, this)
-                    readUpdate(dec, this.doc, this)
+                    const arr = fromBase64(update)
+                    this.#applyUpdate(this.#remoteDoc, arr)
+                    this.#applyUpdate(this.doc, arr)
                 })
             } else {
                 this.pendingSend = true
             }
         }
-        doc.on('updateV2', this.triggerSend)
+        doc.on('updateV2', (_update, origin) => {
+            if (origin !== this) {
+                this.#triggerSend?.()
+            }
+        })
+    }
 
+    #applyUpdate(doc: Y.Doc, arr: Uint8Array<ArrayBufferLike>) {
+        const dec = new Decoder(arr)
+        readUint8(dec) // 0 = sync protocol
+        readUint8(dec) // 2 = update
+        readUpdate(dec, doc, this)
     }
 
     get syncUpdate() {
-        const update = Y.encodeStateAsUpdate(this.doc, Y.encodeStateVector(this.#remoteDoc))
+        const remoteState = Y.encodeStateVector(this.#remoteDoc)
+        const update = Y.encodeStateAsUpdate(this.doc, remoteState)
         const enc = new Encoder()
         writeVarUint(enc, 0) // sync protocol
         writeUpdate(enc, update)
-        return toBase64(toUint8Array(enc))
+        const arr = toUint8Array(enc)
+        return toBase64(arr)
     }
 
     async connect(): Promise<void> {
@@ -70,7 +80,7 @@ export class HttpProvider extends ObservableV2<Events> {
                 return undefined
             })
         if(this.pendingSend){
-            this.triggerSend?.()
+            this.#triggerSend?.()
         }
     }
 }
