@@ -6,6 +6,16 @@ import { fromBase64, toBase64 } from 'lib0/buffer.js'
 import { Decoder, readUint8 } from 'lib0/decoding.js'
 import { HttpProvider } from './y-http'
 
+function areDocsEqual(a: unknown, b: unknown): boolean | undefined {
+    const isADoc = a instanceof Y.Doc
+    const isBDoc = b instanceof Y.Doc
+    if (isADoc && isBDoc) {
+        return JSON.stringify(a.getMap())
+            === JSON.stringify(b.getMap())
+    }
+}
+expect.addEqualityTesters([areDocsEqual])
+
 const api = {
     open: vi.fn(),
     send: vi.fn(),
@@ -54,34 +64,29 @@ test('sends updates', async () => {
     const connection = {}
     api.open.mockResolvedValue(connection)
     const provider = new HttpProvider('url', new Y.Doc(), api)
-    const map = provider.doc.getMap()
     await provider.connect()
-    map.set('hello', 'world')
+    update(provider.doc)
     expect(api.send)
         .toHaveBeenCalledWith('url', connection, anyUpdates)
     const updates = api.send.mock.lastCall?.[2]
     expect(updates.length).toBe(1)
-    const dest = new Y.Doc()
-    receive(dest, updates[0])
-    expect(dest.getMap().get('hello')).toBe('world')
+    expect(docWith(updates)).toEqual(provider.doc)
 })
 
 test('exposes updates', () => {
     const provider = new HttpProvider('url', new Y.Doc(), api)
-    const map = provider.doc.getMap()
-    map.set('hello', 'world')
-    const dest = new Y.Doc()
-    receive(dest, provider.syncUpdate)
-    expect(dest.getMap().get('hello')).toBe('world')
+    update(provider.doc)
+    expect(docWith([provider.syncUpdate])).toEqual(provider.doc)
 })
 
 test('sends pending updates after connecting', async () => {
     const connection = {}
     api.open.mockResolvedValue(connection)
     const provider = new HttpProvider('url', new Y.Doc(), api)
-    const map = provider.doc.getMap()
-    map.set('hello', 'world')
+    update(provider.doc)
     expect(provider.syncUpdate).toBeTruthy
+    expect(api.send)
+        .not.toHaveBeenCalled()
     await provider.connect()
     expect(api.send)
         .toHaveBeenCalledWith('url', connection, anyUpdates)
@@ -95,8 +100,7 @@ test('applies updates received after from send', async () => {
     const spy = vi.spyOn(api, 'send')
         .mockImplementation((_url, _con, updates) => [data, data2, ...updates])
     const provider = new HttpProvider('url', new Y.Doc(), api)
-    provider.doc.getMap().set('hello', 'world')
-    expect(provider.syncUpdate).toBeTruthy
+    update(provider.doc)
     await provider.connect()
     expect(api.send)
         .toHaveBeenCalledWith('url', connection, anyUpdates)
@@ -125,10 +129,10 @@ test('sync between two docs', () => {
     source.on('update', update => {
         Y.applyUpdate(dest, update)
     })
-    const sourceMap = source.getMap()
-    sourceMap.set('hello', 'world')
-    const destMap = dest.getMap()
-    expect(destMap.get('hello')).toBe('world')
+    update(source)
+    expect(dest).toEqual(source)
+    update(dest)
+    expect(source).not.toEqual(dest)
 })
 
 test('two way sync', () => {
@@ -140,12 +144,9 @@ test('two way sync', () => {
     doc2.on('update', update => {
         Y.applyUpdate(doc1, update)
     })
-    const map1 = doc1.getMap()
-    map1.set('hello', 'world')
-    const map2 = doc2.getMap()
-    map2.set('how', 'are you')
-    expect(map2.get('hello')).toBe('world')
-    expect(map1.get('how')).toBe('are you')
+    update(doc1)
+    update(doc2)
+    expect(doc1).toEqual(doc2)
 })
 
 test('using send with y-protocols', () => {
@@ -158,12 +159,22 @@ test('using send with y-protocols', () => {
         const data = toUint8Array(enc)
         send(toBase64(data))
     })
-    const map1 = doc1.getMap()
-    map1.set('hello', 'world')
+    update(doc1)
     expect(send).toHaveBeenCalled()
     const data = send.mock.lastCall?.[0]
     expect(data.slice(0, 3)).toMatchInlineSnapshot(`"AAI"`)
 })
+
+let _updateCount = 0
+function update(doc: Y.Doc) {
+    doc.getMap().set(`update-${_updateCount++}`, 'world')
+}
+
+function docWith(updates: string[]): Y.Doc {
+    const dest = new Y.Doc()
+    updates.forEach(u => receive(dest, u))
+    return dest
+}
 
 function receive(dest: Y.Doc, data: string) {
     const dec = new Decoder(fromBase64(data))
