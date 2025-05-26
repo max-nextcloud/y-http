@@ -46,12 +46,14 @@ export class HttpProvider extends ObservableV2<Events> {
                     this.connection,
                     [ this.syncUpdate ],
                 )
-                response.data.forEach(update => {
+                response?.data?.forEach(update => {
                     const arr = fromBase64(update)
                     this.#applyUpdate(this.#remoteDoc, arr)
                     this.#applyUpdate(this.doc, arr)
                 })
-                this.version = response.version
+                if (response?.version) {
+                    this.version = response.version
+                }
             } else {
                 this.pendingSend = true
             }

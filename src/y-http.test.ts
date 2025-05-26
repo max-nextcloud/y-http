@@ -16,11 +16,44 @@ function areDocsEqual(a: unknown, b: unknown): boolean | undefined {
 }
 expect.addEqualityTesters([areDocsEqual])
 
-function mockApi() {
+class DummyServer {
+    storage = new Map<number, string[]>()
+    version = 0
+
+    constructor(data?: string[]) {
+        if (data) {
+            this.receive(data)
+        }
+    }
+
+    receive(data: string[]) {
+        this.version += Math.floor(Math.random() * 100)
+        this.storage.set(this.version, data)
+    }
+
+    respond(since: number): { data: string[], version: number } {
+        // Todo: figure out how to use Iterator.filter
+        // https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/Global_Objects/Iterator/filter
+        const data = Array.from(this.storage.entries())
+            .filter(([id, _data]) => id >= since)
+            .map(([_id, data]) => data)
+            .flat()
+        return { data, version: this.version }
+    }
+}
+
+function mockApi(server?: DummyServer) {
     const _connection = {}
     const open = vi.fn()
     open.mockResolvedValue(_connection)
     const send = vi.fn()
+    if (server) {
+        send.mockImplementation(async (_url, _con, updates) => {
+            server.receive(updates)
+            // TODO: handle version arg to send
+            return server.respond(0)
+        })
+    }
     return { open, send, _connection }
 }
 
@@ -95,24 +128,28 @@ test('sends pending updates after connecting', async () => {
         .toHaveBeenCalledWith('url', api._connection, anyUpdates)
 })
 
-test('applies updates received after from send', async () => {
-    const data = "AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA=="
-    const data2 = "AAISAQHYidydCwOE2IncnQsCAWkA"
-    const api = mockApi()
-    const spy = vi.spyOn(api, 'send')
-        .mockImplementation((_url, _con, updates) => ({
-           data: [data, data2, ...updates],
-           version: 123,
-        }))
+test('tracks version from send', async () => {
+    const server = new DummyServer()
+    const api = mockApi(server)
     const provider = new HttpProvider('url', new Y.Doc(), api)
     update(provider.doc)
     await provider.connect()
-    expect(api.send)
-        .toHaveBeenCalledWith('url', api._connection, anyUpdates)
-    expect(provider.version).toBe(123)
+    expect(provider.version).toBeGreaterThan(0)
+    expect(provider.version).toBe(server.version)
+})
+
+test('applies updates received after from send', async () => {
+    const server = new DummyServer([
+        "AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA==",
+        "AAISAQHYidydCwOE2IncnQsCAWkA",
+    ])
+    const api = mockApi(server)
+    const provider = new HttpProvider('url', new Y.Doc(), api)
+    update(provider.doc)
+    await provider.connect()
     expect(provider.doc.getXmlFragment('default'))
         .toMatchInlineSnapshot(`"<paragraph>Hi</paragraph>"`)
-    expect(spy).toHaveBeenCalledOnce()
+    expect(api.send).toHaveBeenCalledOnce()
 })
 
 // TODO: Check we do not resend received updates
