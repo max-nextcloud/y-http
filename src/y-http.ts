@@ -9,7 +9,12 @@ interface Connection {}
 
 interface HttpApi {
     open?: (url: string) => Promise<Connection>,
-    send: (url: string, connection: Connection, data?: string[]) => Promise<string[]>,
+    send: (url: string, connection: Connection, data?: string[]) => Promise<sendResponse>,
+}
+
+interface sendResponse {
+    data: string[],
+    version: number,
 }
 
 interface Events {
@@ -22,6 +27,7 @@ export class HttpProvider extends ObservableV2<Events> {
     doc: Y.Doc
     #remoteDoc: Y.Doc
     api: HttpApi
+    version = 0
     connection?: Connection
     #triggerSend?: (update?: Uint8Array) => void
     // TODO: drop in favor of checking for updates
@@ -35,16 +41,17 @@ export class HttpProvider extends ObservableV2<Events> {
         this.api = api
         this.#triggerSend = async (_update?: Uint8Array) => {
             if (this.connection) {
-                const updates = await this.api.send(
+                const response = await this.api.send(
                     this.url,
                     this.connection,
                     [ this.syncUpdate ],
                 )
-                ;(updates || []).forEach(update => {
+                response.data.forEach(update => {
                     const arr = fromBase64(update)
                     this.#applyUpdate(this.#remoteDoc, arr)
                     this.#applyUpdate(this.doc, arr)
                 })
+                this.version = response.version
             } else {
                 this.pendingSend = true
             }

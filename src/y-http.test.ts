@@ -35,6 +35,7 @@ test('Instantiating the provider with a doc', () => {
     const provider = new HttpProvider('url', doc, mockApi())
     expect(provider.doc).toBe(doc)
     expect(provider.syncUpdate).toBeFalsy
+    expect(provider.version).toBe(0)
 })
 
 test('connect using the api', () => {
@@ -99,12 +100,16 @@ test('applies updates received after from send', async () => {
     const data2 = "AAISAQHYidydCwOE2IncnQsCAWkA"
     const api = mockApi()
     const spy = vi.spyOn(api, 'send')
-        .mockImplementation((_url, _con, updates) => [data, data2, ...updates])
+        .mockImplementation((_url, _con, updates) => ({
+           data: [data, data2, ...updates],
+           version: 123,
+        }))
     const provider = new HttpProvider('url', new Y.Doc(), api)
     update(provider.doc)
     await provider.connect()
     expect(api.send)
         .toHaveBeenCalledWith('url', api._connection, anyUpdates)
+    expect(provider.version).toBe(123)
     expect(provider.doc.getXmlFragment('default'))
         .toMatchInlineSnapshot(`"<paragraph>Hi</paragraph>"`)
     expect(spy).toHaveBeenCalledOnce()
