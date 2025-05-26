@@ -16,9 +16,12 @@ function areDocsEqual(a: unknown, b: unknown): boolean | undefined {
 }
 expect.addEqualityTesters([areDocsEqual])
 
-const api = {
-    open: vi.fn(),
-    send: vi.fn(),
+function mockApi() {
+    const _connection = {}
+    const open = vi.fn()
+    open.mockResolvedValue(_connection)
+    const send = vi.fn()
+    return { open, send, _connection }
 }
 
 beforeEach(() =>
@@ -29,12 +32,13 @@ const anyUpdates = [ expect.any(String) ]
 
 test('Instantiating the provider with a doc', () => {
     const doc = new Y.Doc()
-    const provider = new HttpProvider('url', doc, api)
+    const provider = new HttpProvider('url', doc, mockApi())
     expect(provider.doc).toBe(doc)
     expect(provider.syncUpdate).toBeFalsy
 })
 
 test('connect using the api', () => {
+    const api = mockApi()
     const provider = new HttpProvider('url', new Y.Doc(), api)
     provider.connect()
     expect(api.open).toHaveBeenCalled()
@@ -42,14 +46,14 @@ test('connect using the api', () => {
 })
 
 test('exposes connection', async () => {
-    const connection = {}
-    api.open.mockResolvedValue(connection)
+    const api = mockApi()
     const provider = new HttpProvider('url', new Y.Doc(), api)
     await provider.connect()
-    expect(provider.connection).toBe(connection)
+    expect(provider.connection).toBe(api._connection)
 })
 
 test('emit error when failing to connect', async () => {
+    const api = mockApi()
     const err = new Error
     api.open.mockRejectedValue(err)
     const provider = new HttpProvider('url', new Y.Doc(), api)
@@ -61,27 +65,25 @@ test('emit error when failing to connect', async () => {
 })
 
 test('sends updates', async () => {
-    const connection = {}
-    api.open.mockResolvedValue(connection)
+    const api = mockApi()
     const provider = new HttpProvider('url', new Y.Doc(), api)
     await provider.connect()
     update(provider.doc)
     expect(api.send)
-        .toHaveBeenCalledWith('url', connection, anyUpdates)
+        .toHaveBeenCalledWith('url', api._connection, anyUpdates)
     const updates = api.send.mock.lastCall?.[2]
     expect(updates.length).toBe(1)
     expect(docWith(updates)).toEqual(provider.doc)
 })
 
 test('exposes updates', () => {
-    const provider = new HttpProvider('url', new Y.Doc(), api)
+    const provider = new HttpProvider('url', new Y.Doc(), mockApi())
     update(provider.doc)
     expect(docWith([provider.syncUpdate])).toEqual(provider.doc)
 })
 
 test('sends pending updates after connecting', async () => {
-    const connection = {}
-    api.open.mockResolvedValue(connection)
+    const api = mockApi()
     const provider = new HttpProvider('url', new Y.Doc(), api)
     update(provider.doc)
     expect(provider.syncUpdate).toBeTruthy
@@ -89,21 +91,20 @@ test('sends pending updates after connecting', async () => {
         .not.toHaveBeenCalled()
     await provider.connect()
     expect(api.send)
-        .toHaveBeenCalledWith('url', connection, anyUpdates)
+        .toHaveBeenCalledWith('url', api._connection, anyUpdates)
 })
 
 test('applies updates received after from send', async () => {
     const data = "AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA=="
     const data2 = "AAISAQHYidydCwOE2IncnQsCAWkA"
-    const connection = {}
-    api.open.mockResolvedValue(connection)
+    const api = mockApi()
     const spy = vi.spyOn(api, 'send')
         .mockImplementation((_url, _con, updates) => [data, data2, ...updates])
     const provider = new HttpProvider('url', new Y.Doc(), api)
     update(provider.doc)
     await provider.connect()
     expect(api.send)
-        .toHaveBeenCalledWith('url', connection, anyUpdates)
+        .toHaveBeenCalledWith('url', api._connection, anyUpdates)
     expect(provider.doc.getXmlFragment('default'))
         .toMatchInlineSnapshot(`"<paragraph>Hi</paragraph>"`)
     expect(spy).toHaveBeenCalledOnce()
