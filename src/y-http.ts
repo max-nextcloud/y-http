@@ -9,10 +9,10 @@ interface Connection {}
 
 interface HttpApi {
     open?: (url: string) => Promise<Connection>,
-    send: (url: string, connection: Connection, data?: string[]) => Promise<sendResponse>,
+    sync: (url: string, connection: Connection, data?: string[]) => Promise<syncResponse>,
 }
 
-interface sendResponse {
+interface syncResponse {
     data: string[],
     version: number,
 }
@@ -29,7 +29,7 @@ export class HttpProvider extends ObservableV2<Events> {
     api: HttpApi
     version = 0
     connection?: Connection
-    #triggerSend?: (update?: Uint8Array) => void
+    #triggerSync?: (update?: Uint8Array) => void
 
     constructor(url: string, doc: Y.Doc, api: HttpApi) {
         super()
@@ -37,9 +37,9 @@ export class HttpProvider extends ObservableV2<Events> {
         this.doc = doc
         this.#remoteDoc = new Y.Doc()
         this.api = api
-        this.#triggerSend = async (_update?: Uint8Array) => {
+        this.#triggerSync = async (_update?: Uint8Array) => {
             if (this.connection) {
-                const response = await this.api.send(
+                const response = await this.api.sync(
                     this.url,
                     this.connection,
                     [ this.syncUpdate ],
@@ -56,7 +56,7 @@ export class HttpProvider extends ObservableV2<Events> {
         }
         doc.on('updateV2', (_update, origin) => {
             if (origin !== this) {
-                this.#triggerSend?.()
+                this.#triggerSync?.()
             }
         })
     }
@@ -84,6 +84,6 @@ export class HttpProvider extends ObservableV2<Events> {
                 this.emit('connection-error', [err, this])
                 return undefined
             })
-        this.#triggerSend?.()
+        this.#triggerSync?.()
     }
 }

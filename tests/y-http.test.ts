@@ -53,9 +53,9 @@ test('sends updates', async () => {
     const provider = new HttpProvider('url', new Y.Doc(), api)
     await provider.connect()
     update(provider.doc)
-    expect(api.send)
+    expect(api.sync)
         .toHaveBeenCalledWith('url', api._connection, anyUpdates)
-    const updates = api.send.mock.lastCall?.[2]
+    const updates = api.sync.mock.lastCall?.[2]
     expect(updates.length).toBe(1)
     expect(docWith(updates)).toEqual(provider.doc)
 })
@@ -71,14 +71,14 @@ test('sends pending updates after connecting', async () => {
     const provider = new HttpProvider('url', new Y.Doc(), api)
     update(provider.doc)
     expect(provider.syncUpdate).toBeTruthy
-    expect(api.send)
+    expect(api.sync)
         .not.toHaveBeenCalled()
     await provider.connect()
-    expect(api.send)
+    expect(api.sync)
         .toHaveBeenCalledWith('url', api._connection, anyUpdates)
 })
 
-test('tracks version from send', async () => {
+test('tracks version from sync', async () => {
     const server = new DummyServer()
     const api = mockApi(server)
     const provider = new HttpProvider('url', new Y.Doc(), api)
@@ -88,7 +88,7 @@ test('tracks version from send', async () => {
     expect(provider.version).toBe(server.version)
 })
 
-test('applies updates received from send', async () => {
+test('applies updates received from sync', async () => {
     const server = new DummyServer([
         "AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA==",
         "AAISAQHYidydCwOE2IncnQsCAWkA",
@@ -99,10 +99,10 @@ test('applies updates received from send', async () => {
     await provider.connect()
     expect(provider.doc.getXmlFragment('default'))
         .toMatchInlineSnapshot(`"<paragraph>Hi</paragraph>"`)
-    expect(api.send).toHaveBeenCalledOnce()
+    expect(api.sync).toHaveBeenCalledOnce()
 })
 
-test('syncs docs via server while sending', async () => {
+test('syncs docs via server on connection', async () => {
     const server = new DummyServer()
     const client1 = mockApi(server)
     const client2 = mockApi(server)
