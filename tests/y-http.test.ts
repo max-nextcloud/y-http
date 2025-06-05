@@ -3,7 +3,7 @@ import * as sync from 'y-protocols/sync'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { fromBase64, } from 'lib0/buffer.js'
 import { Decoder, readUint8 } from 'lib0/decoding.js'
-import { HttpProvider } from './y-http'
+import { HttpProvider } from '../src/y-http'
 
 class DummyServer {
     storage = new Map<number, string[]>()
