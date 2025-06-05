@@ -4,16 +4,6 @@ import { Encoder, toUint8Array, writeUint8 } from 'lib0/encoding.js'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { toBase64 } from 'lib0/buffer.js'
 
-function areDocsEqual(a: unknown, b: unknown): boolean | undefined {
-    const isADoc = a instanceof Y.Doc
-    const isBDoc = b instanceof Y.Doc
-    if (isADoc && isBDoc) {
-        return JSON.stringify(a.getMap())
-            === JSON.stringify(b.getMap())
-    }
-}
-expect.addEqualityTesters([areDocsEqual])
-
 beforeEach(() =>
     vi.resetAllMocks()
 )

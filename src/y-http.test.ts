@@ -5,16 +5,6 @@ import { fromBase64, } from 'lib0/buffer.js'
 import { Decoder, readUint8 } from 'lib0/decoding.js'
 import { HttpProvider } from './y-http'
 
-function areDocsEqual(a: unknown, b: unknown): boolean | undefined {
-    const isADoc = a instanceof Y.Doc
-    const isBDoc = b instanceof Y.Doc
-    if (isADoc && isBDoc) {
-        return JSON.stringify(a.getMap())
-            === JSON.stringify(b.getMap())
-    }
-}
-expect.addEqualityTesters([areDocsEqual])
-
 class DummyServer {
     storage = new Map<number, string[]>()
     version = 0
