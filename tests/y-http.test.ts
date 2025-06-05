@@ -88,7 +88,7 @@ test('tracks version from send', async () => {
     expect(provider.version).toBe(server.version)
 })
 
-test('applies updates received after from send', async () => {
+test('applies updates received from send', async () => {
     const server = new DummyServer([
         "AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA==",
         "AAISAQHYidydCwOE2IncnQsCAWkA",
@@ -100,6 +100,18 @@ test('applies updates received after from send', async () => {
     expect(provider.doc.getXmlFragment('default'))
         .toMatchInlineSnapshot(`"<paragraph>Hi</paragraph>"`)
     expect(api.send).toHaveBeenCalledOnce()
+})
+
+test('syncs docs via server while sending', async () => {
+    const server = new DummyServer()
+    const client1 = mockApi(server)
+    const client2 = mockApi(server)
+    const provider1 = new HttpProvider('url', new Y.Doc(), client1)
+    const provider2 = new HttpProvider('url', new Y.Doc(), client2)
+    update(provider1.doc)
+    await provider1.connect()
+    await provider2.connect()
+    expect(provider2.doc).toEqual(provider1.doc)
 })
 
 // TODO: Check we do not resend received updates

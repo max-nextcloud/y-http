@@ -30,8 +30,6 @@ export class HttpProvider extends ObservableV2<Events> {
     version = 0
     connection?: Connection
     #triggerSend?: (update?: Uint8Array) => void
-    // TODO: drop in favor of checking for updates
-    pendingSend = false
 
     constructor(url: string, doc: Y.Doc, api: HttpApi) {
         super()
@@ -54,8 +52,6 @@ export class HttpProvider extends ObservableV2<Events> {
                 if (response?.version) {
                     this.version = response.version
                 }
-            } else {
-                this.pendingSend = true
             }
         }
         doc.on('updateV2', (_update, origin) => {
@@ -88,8 +84,6 @@ export class HttpProvider extends ObservableV2<Events> {
                 this.emit('connection-error', [err, this])
                 return undefined
             })
-        if(this.pendingSend){
-            this.#triggerSend?.()
-        }
+        this.#triggerSend?.()
     }
 }
