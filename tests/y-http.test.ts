@@ -1,17 +1,13 @@
 import * as Y from 'yjs'
-import * as sync from 'y-protocols/sync'
 import { beforeEach, expect, test, vi } from 'vitest'
-import { fromBase64, } from 'lib0/buffer.js'
-import { Decoder, readUint8 } from 'lib0/decoding.js'
 import { HttpProvider } from '../src/y-http'
 import { DummyServer } from './DummyServer.ts'
 import { mockApi } from './mockApi.ts'
+import { update, docWith } from './helpers.ts'
 
 beforeEach(() =>
     vi.resetAllMocks()
 )
-
-const anyUpdates = [ expect.any(String) ]
 
 test('Instantiating the provider with a doc', () => {
     const doc = new Y.Doc()
@@ -21,66 +17,11 @@ test('Instantiating the provider with a doc', () => {
     expect(provider.version).toBe(0)
 })
 
-test('connect using the api', () => {
-    const api = mockApi()
-    const provider = new HttpProvider('url', new Y.Doc(), api)
-    provider.connect()
-    expect(api.open).toHaveBeenCalled()
-    expect(api.open.mock.lastCall).toEqual(['url'])
-})
-
-test('exposes connection', async () => {
-    const api = mockApi()
-    const provider = new HttpProvider('url', new Y.Doc(), api)
-    await provider.connect()
-    expect(provider.connection).toBe(api._connection)
-})
-
-test('emit error when failing to connect', async () => {
-    const api = mockApi()
-    const err = new Error
-    api.open.mockRejectedValue(err)
-    const provider = new HttpProvider('url', new Y.Doc(), api)
-    const onErr = vi.fn()
-    provider.on('connection-error', onErr)
-    await provider.connect()
-    expect(onErr).toHaveBeenCalled()
-    expect(onErr.mock.lastCall).toEqual([err , provider])
-})
-
-test('sends updates', async () => {
-    const api = mockApi()
-    const provider = new HttpProvider('url', new Y.Doc(), api)
-    await provider.connect()
-    update(provider.doc)
-    expect(api.sync)
-        .toHaveBeenCalledWith('url', api._connection, anyUpdates)
-    const updates = api.sync.mock.lastCall?.[2]
-    expect(updates.length).toBe(1)
-    expect(docWith(updates)).toEqual(provider.doc)
-})
-
 test('exposes updates', () => {
     const provider = new HttpProvider('url', new Y.Doc(), mockApi())
     update(provider.doc)
     expect(docWith([provider.syncUpdate])).toEqual(provider.doc)
 })
-
-test('sends pending updates after connecting', async () => {
-    const api = mockApi()
-    const provider = new HttpProvider('url', new Y.Doc(), api)
-    update(provider.doc)
-    expect(provider.syncUpdate).toBeTruthy
-    expect(api.sync)
-        .not.toHaveBeenCalled()
-    await provider.connect()
-    expect(api.sync)
-        .toHaveBeenCalledWith('url', api._connection, anyUpdates)
-})
-
-test.todo('do not resend received updates')
-test.todo('resend updates send during failed request')
-test.todo('send at most one request every maxFrequency ms')
 
 test('tracks version from sync', async () => {
     const server = new DummyServer()
@@ -117,21 +58,3 @@ test('syncs docs via server on connection', async () => {
     await provider2.connect()
     expect(provider2.doc).toEqual(provider1.doc)
 })
-
-let _updateCount = 0
-function update(doc: Y.Doc) {
-    doc.getMap().set(`update-${_updateCount++}`, 'world')
-}
-
-function docWith(updates: string[]): Y.Doc {
-    const dest = new Y.Doc()
-    updates.forEach(u => receive(dest, u))
-    return dest
-}
-
-function receive(dest: Y.Doc, data: string) {
-    const dec = new Decoder(fromBase64(data))
-    expect(readUint8(dec)).toBe(0)
-    expect(readUint8(dec)).toBe(2)
-    sync.readUpdate(dec, dest, 'test')
-}
