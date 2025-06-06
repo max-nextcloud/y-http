@@ -30,6 +30,8 @@ export class HttpProvider extends ObservableV2<Events> {
     api: HttpApi
     version = 0
     connection?: Connection
+    #lastSync = 0
+    #pendingSync = 0
 
     constructor(url: string, doc: Y.Doc, api: HttpApi) {
         super()
@@ -39,26 +41,42 @@ export class HttpProvider extends ObservableV2<Events> {
         this.api = api
         doc.on('updateV2', (_update, origin) => {
             if (origin !== this) {
-                this.#sync()
+                console.log('update')
+                this.#triggerSync()
             }
         })
     }
 
-    async #sync(_update?: Uint8Array) {
-        if (this.connection) {
-            const response = await this.api.sync(
-                this.url,
-                this.connection,
-                [ this.syncUpdate ],
-            )
-            response?.data?.forEach(update => {
-                const arr = fromBase64(update)
-                this.#applyUpdate(this.#remoteDoc, arr)
-                this.#applyUpdate(this.doc, arr)
-            })
-            if (response?.version) {
-                this.version = response.version
-            }
+    #triggerSync() {
+        if (this.#pendingSync) {
+            return
+        }
+        const waitTime = this.#lastSync + MIN_INTERVAL_BETWEEN_SYNCS - Date.now()
+        if (waitTime < 1) {
+            this.#sync()
+            return
+        }
+        this.#pendingSync = setTimeout(() => this.#sync(), waitTime)
+    }
+
+    async #sync() {
+        if (!this.connection) {
+            return
+        }
+        const now = Date.now()
+        const response = await this.api.sync(
+            this.url,
+            this.connection,
+            [ this.syncUpdate ],
+        )
+        this.#lastSync = now
+        response?.data?.forEach(update => {
+            const arr = fromBase64(update)
+            this.#applyUpdate(this.#remoteDoc, arr)
+            this.#applyUpdate(this.doc, arr)
+        })
+        if (response?.version) {
+            this.version = response.version
         }
     }
 
@@ -85,6 +103,6 @@ export class HttpProvider extends ObservableV2<Events> {
                 this.emit('connection-error', [err, this])
                 return undefined
             })
-        this.#sync?.()
+        this.#sync()
     }
 }
