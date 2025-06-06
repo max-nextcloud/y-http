@@ -21,6 +21,7 @@ interface Events {
     'connection-error': (error: Error, provider: HttpProvider) => any,
 }
 
+export const MIN_INTERVAL_BETWEEN_SYNCS = 100 // milliseconds
 
 export class HttpProvider extends ObservableV2<Events> {
     url: string
@@ -29,7 +30,6 @@ export class HttpProvider extends ObservableV2<Events> {
     api: HttpApi
     version = 0
     connection?: Connection
-    #triggerSync?: (update?: Uint8Array) => void
 
     constructor(url: string, doc: Y.Doc, api: HttpApi) {
         super()
@@ -37,28 +37,29 @@ export class HttpProvider extends ObservableV2<Events> {
         this.doc = doc
         this.#remoteDoc = new Y.Doc()
         this.api = api
-        this.#triggerSync = async (_update?: Uint8Array) => {
-            if (this.connection) {
-                const response = await this.api.sync(
-                    this.url,
-                    this.connection,
-                    [ this.syncUpdate ],
-                )
-                response?.data?.forEach(update => {
-                    const arr = fromBase64(update)
-                    this.#applyUpdate(this.#remoteDoc, arr)
-                    this.#applyUpdate(this.doc, arr)
-                })
-                if (response?.version) {
-                    this.version = response.version
-                }
-            }
-        }
         doc.on('updateV2', (_update, origin) => {
             if (origin !== this) {
-                this.#triggerSync?.()
+                this.#sync()
             }
         })
+    }
+
+    async #sync(_update?: Uint8Array) {
+        if (this.connection) {
+            const response = await this.api.sync(
+                this.url,
+                this.connection,
+                [ this.syncUpdate ],
+            )
+            response?.data?.forEach(update => {
+                const arr = fromBase64(update)
+                this.#applyUpdate(this.#remoteDoc, arr)
+                this.#applyUpdate(this.doc, arr)
+            })
+            if (response?.version) {
+                this.version = response.version
+            }
+        }
     }
 
     #applyUpdate(doc: Y.Doc, arr: Uint8Array<ArrayBufferLike>) {
@@ -84,6 +85,6 @@ export class HttpProvider extends ObservableV2<Events> {
                 this.emit('connection-error', [err, this])
                 return undefined
             })
-        this.#triggerSync?.()
+        this.#sync?.()
     }
 }
