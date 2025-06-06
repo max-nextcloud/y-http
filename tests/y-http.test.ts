@@ -78,6 +78,10 @@ test('sends pending updates after connecting', async () => {
         .toHaveBeenCalledWith('url', api._connection, anyUpdates)
 })
 
+test.todo('do not resend received updates')
+test.todo('resend updates send during failed request')
+test.todo('send at most one request every maxFrequency ms')
+
 test('tracks version from sync', async () => {
     const server = new DummyServer()
     const api = mockApi(server)
@@ -113,8 +117,6 @@ test('syncs docs via server on connection', async () => {
     await provider2.connect()
     expect(provider2.doc).toEqual(provider1.doc)
 })
-
-// TODO: Check we do not resend received updates
 
 let _updateCount = 0
 function update(doc: Y.Doc) {
