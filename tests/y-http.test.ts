@@ -1,12 +1,17 @@
 import * as Y from 'yjs'
-import { beforeEach, expect, test, vi } from 'vitest'
-import { HttpProvider } from '../src/y-http'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import { HttpProvider, messageAwareness } from '../src/y-http'
 import { DummyServer } from './DummyServer.ts'
 import { mockApi } from './mockApi.ts'
 import { update, docWith } from './helpers.ts'
+import { fromBase64 } from 'lib0/buffer.js'
 
 beforeEach(() =>
-    vi.resetAllMocks()
+    vi.useFakeTimers
+)
+
+afterEach(() =>
+    vi.restoreAllMocks()
 )
 
 test('Instantiating the provider with a doc', () => {
@@ -17,10 +22,18 @@ test('Instantiating the provider with a doc', () => {
     expect(provider.version).toBe(0)
 })
 
-test('exposes updates', () => {
+test('exposes sync updates', () => {
     const provider = new HttpProvider('url', new Y.Doc(), mockApi())
     update(provider.doc)
     expect(docWith([provider.syncUpdate])).toEqual(provider.doc)
+})
+
+test('exposes awareness message', () => {
+    const provider = new HttpProvider('url', new Y.Doc(), mockApi())
+    provider.awareness.setLocalStateField('user', { name: 'me' })
+    expect(typeof provider.awarenessUpdate).toBe('string')
+    const message = fromBase64(provider.awarenessUpdate as string)
+    expect(message[0]).toBe(messageAwareness)
 })
 
 test('tracks version from sync', async () => {
