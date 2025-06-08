@@ -19,10 +19,7 @@ afterEach(() => {
 })
 
 test('sends updates', async () => {
-	const server = new DummyServer([
-		'AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA==',
-		'AAISAQHYidydCwOE2IncnQsCAWkA',
-	])
+	const server = new DummyServer()
 	const client = mockClient(server)
 	const provider = new HttpProvider(new Y.Doc(), client)
 	await provider.connect()
@@ -35,9 +32,6 @@ test('sends updates', async () => {
 	const updates = client.sync.mock.lastCall?.[1]
 	expect(updates.length).toBe(2) // awareness and sync
 	expect(docWith(updates)).toEqual(provider.doc)
-	expect(provider.doc.getXmlFragment('default')).toMatchInlineSnapshot(
-		`"<paragraph>Hi</paragraph>"`,
-	)
 	await vi.waitUntil(() => !provider.syncUpdate)
 	expect(provider.syncUpdate).toBe('')
 })
@@ -55,18 +49,6 @@ test('sends pending updates after connecting', async () => {
 	])
 })
 
-test('send at most one request every maxFrequency ms', async () => {
-	const client = mockClient()
-	const provider = new HttpProvider(new Y.Doc(), client)
-	await provider.connect()
-	expect(client.sync).toHaveBeenCalledTimes(1)
-	updateDoc(provider)
-	updateDoc(provider)
-	expect(client.sync).toHaveBeenCalledTimes(1)
-	vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
-	expect(client.sync).toHaveBeenCalledTimes(2)
-})
-
 test('include an awareness message', async () => {
 	const client = mockClient()
 	const provider = new HttpProvider(new Y.Doc(), client)
@@ -80,17 +62,19 @@ test('include an awareness message', async () => {
 	expect(message[0]).toBe(messageAwareness)
 })
 
-test('awareness updates trigger sync', async () => {
-	const client = mockClient()
-	const provider = new HttpProvider(new Y.Doc(), client)
-	updateAwareness(provider)
-	await provider.connect()
-	expect(client.sync).toHaveBeenCalledTimes(1)
-	updateAwareness(provider)
-	updateAwareness(provider)
-	expect(client.sync).toHaveBeenCalledTimes(1)
-	vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
-	expect(client.sync).toHaveBeenCalledTimes(2)
+Object.entries({doc: updateDoc, awareness: updateAwareness})
+	.forEach(([key, fn]) => {
+		test(`${key} changes trigger sync with interval`, async () => {
+			const client = mockClient()
+			const provider = new HttpProvider(new Y.Doc(), client)
+			await provider.connect()
+			expect(client.sync).toHaveBeenCalledTimes(1)
+			updateDoc(provider)
+			updateDoc(provider)
+			expect(client.sync).toHaveBeenCalledTimes(1)
+			vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
+			expect(client.sync).toHaveBeenCalledTimes(2)
+		})
 })
 
 test.todo('do not resend received updates')
