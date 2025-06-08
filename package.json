@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "lint": "oxlint",
-    "test": "vitest"
+    "test": "oxlint && vitest run && prettier -c ."
   },
   "prettier": "@nextcloud/prettier-config",
   "dependencies": {
