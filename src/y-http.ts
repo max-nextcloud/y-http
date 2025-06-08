@@ -1,5 +1,5 @@
 import { fromBase64, toBase64 } from 'lib0/buffer.js'
-import { Decoder, readUint8 } from 'lib0/decoding.js'
+import { clone, Decoder, readUint8 } from 'lib0/decoding.js'
 import { createEncoder, Encoder, toUint8Array, writeVarUint, writeVarUint8Array } from 'lib0/encoding.js'
 import { ObservableV2 } from 'lib0/observable.js'
 import { readUpdate, writeUpdate } from 'y-protocols/sync.js'
@@ -39,6 +39,7 @@ export class HttpProvider extends ObservableV2<Events> {
     #lastSync = 0
     #pendingSync = 0
     awareness: Awareness
+    #messageHandlers: ((this: HttpProvider, dec: Decoder) => void)[] = []
 
     constructor(doc: Y.Doc, client: YHttpClient) {
         super()
@@ -52,6 +53,7 @@ export class HttpProvider extends ObservableV2<Events> {
                 this.#triggerSync()
             }
         })
+        this.#messageHandlers[messageSync] = this.#handleSyncMessage
     }
 
     #triggerSync() {
@@ -90,17 +92,16 @@ export class HttpProvider extends ObservableV2<Events> {
     }
 
     #receive(message: Uint8Array<ArrayBufferLike>) {
-        this.#applyUpdate(this.#remoteDoc, message)
-        this.#applyUpdate(this.doc, message)
+        const dec = new Decoder(message)
+        const kind = readUint8(dec)
+        this.#messageHandlers[kind]?.apply(this, [dec])
     }
 
-    #applyUpdate(doc: Y.Doc, arr: Uint8Array<ArrayBufferLike>) {
-        const dec = new Decoder(arr)
-        if (readUint8(dec) !== messageSync) {
-            return
-        }
+    #handleSyncMessage(dec: Decoder) {
         readUint8(dec) // 2 = update
-        readUpdate(dec, doc, this)
+        const dec2 = clone(dec)
+        readUpdate(dec, this.doc, this)
+        readUpdate(dec2, this.#remoteDoc, this)
     }
 
     get syncUpdate() {
