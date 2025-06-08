@@ -63,14 +63,14 @@ test('include an awareness message', async () => {
 })
 
 Object.entries({ doc: updateDoc, awareness: updateAwareness }).forEach(
-	([key, fn]) => {
+	([key, updateFn]) => {
 		test(`${key} changes trigger sync with interval`, async () => {
 			const client = mockClient()
 			const provider = new HttpProvider(new Y.Doc(), client)
 			await provider.connect()
 			expect(client.sync).toHaveBeenCalledTimes(1)
-			updateDoc(provider)
-			updateDoc(provider)
+			updateFn(provider)
+			updateFn(provider)
 			expect(client.sync).toHaveBeenCalledTimes(1)
 			vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
 			expect(client.sync).toHaveBeenCalledTimes(2)
