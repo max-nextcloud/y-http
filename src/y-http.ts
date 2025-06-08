@@ -52,9 +52,13 @@ export class HttpProvider extends ObservableV2<Events> {
 		this.awareness = new Awareness(doc)
 		this.#remoteDoc = new Y.Doc()
 		this.client = client
-		doc.on('updateV2', (_update, origin) => {
+		doc.on('updateV2', (_update, origin): void => {
 			if (origin !== this) {
-				console.log('update')
+				this.#triggerSync()
+			}
+		})
+		this.awareness.on('update', (_update: any, origin: any): void => {
+			if (origin !== this) {
 				this.#triggerSync()
 			}
 		})

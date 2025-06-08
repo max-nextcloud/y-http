@@ -80,5 +80,18 @@ test('include an awareness message', async () => {
 	expect(message[0]).toBe(messageAwareness)
 })
 
+test('awareness updates trigger sync', async () => {
+	const client = mockClient()
+	const provider = new HttpProvider(new Y.Doc(), client)
+	provider.awareness.setLocalStateField('user', { name: 'me', pos: 123 })
+	await provider.connect()
+	expect(client.sync).toHaveBeenCalledTimes(1)
+	provider.awareness.setLocalStateField('user', { name: 'me', pos: 124 })
+	provider.awareness.setLocalStateField('user', { name: 'me', pos: 125 })
+	expect(client.sync).toHaveBeenCalledTimes(1)
+	vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
+	expect(client.sync).toHaveBeenCalledTimes(2)
+})
+
 test.todo('do not resend received updates')
 test.todo('resend updates send during failed request')
