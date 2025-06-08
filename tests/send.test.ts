@@ -6,7 +6,7 @@ import {
 	MIN_INTERVAL_BETWEEN_SYNCS,
 } from '../src/y-http'
 import { mockClient } from './mockClient.ts'
-import { update, docWith } from './helpers.ts'
+import { updateDoc, docWith, updateAwareness } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
 import { DummyServer } from './DummyServer.ts'
 
@@ -26,7 +26,7 @@ test('sends updates', async () => {
 	const client = mockClient(server)
 	const provider = new HttpProvider(new Y.Doc(), client)
 	await provider.connect()
-	update(provider.doc)
+	updateDoc(provider)
 	vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
 	expect(client.sync).toHaveBeenCalledWith(client._connection, [
 		provider.syncUpdate,
@@ -45,7 +45,7 @@ test('sends updates', async () => {
 test('sends pending updates after connecting', async () => {
 	const client = mockClient()
 	const provider = new HttpProvider(new Y.Doc(), client)
-	update(provider.doc)
+	updateDoc(provider)
 	expect(provider.syncUpdate).toBeTruthy
 	expect(client.sync).not.toHaveBeenCalled()
 	await provider.connect()
@@ -60,8 +60,8 @@ test('send at most one request every maxFrequency ms', async () => {
 	const provider = new HttpProvider(new Y.Doc(), client)
 	await provider.connect()
 	expect(client.sync).toHaveBeenCalledTimes(1)
-	update(provider.doc)
-	update(provider.doc)
+	updateDoc(provider)
+	updateDoc(provider)
 	expect(client.sync).toHaveBeenCalledTimes(1)
 	vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
 	expect(client.sync).toHaveBeenCalledTimes(2)
@@ -70,7 +70,7 @@ test('send at most one request every maxFrequency ms', async () => {
 test('include an awareness message', async () => {
 	const client = mockClient()
 	const provider = new HttpProvider(new Y.Doc(), client)
-	provider.awareness.setLocalStateField('user', { name: 'me' })
+	updateAwareness(provider)
 	await provider.connect()
 	expect(client.sync).toHaveBeenCalledTimes(1)
 	const updates = client.sync.mock.lastCall?.[1]
@@ -83,11 +83,11 @@ test('include an awareness message', async () => {
 test('awareness updates trigger sync', async () => {
 	const client = mockClient()
 	const provider = new HttpProvider(new Y.Doc(), client)
-	provider.awareness.setLocalStateField('user', { name: 'me', pos: 123 })
+	updateAwareness(provider)
 	await provider.connect()
 	expect(client.sync).toHaveBeenCalledTimes(1)
-	provider.awareness.setLocalStateField('user', { name: 'me', pos: 124 })
-	provider.awareness.setLocalStateField('user', { name: 'me', pos: 125 })
+	updateAwareness(provider)
+	updateAwareness(provider)
 	expect(client.sync).toHaveBeenCalledTimes(1)
 	vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
 	expect(client.sync).toHaveBeenCalledTimes(2)

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { HttpProvider, messageAwareness } from '../src/y-http'
 import { DummyServer } from './DummyServer.ts'
 import { mockClient } from './mockClient.ts'
-import { update, docWith } from './helpers.ts'
+import { updateDoc, docWith, updateAwareness } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
 
 beforeEach(() => vi.useFakeTimers)
@@ -20,7 +20,7 @@ test('Instantiating the provider with a doc', () => {
 
 test('exposes sync updates', () => {
 	const provider = new HttpProvider(new Y.Doc(), mockClient())
-	update(provider.doc)
+	updateDoc(provider)
 	expect(docWith([provider.syncUpdate])).toEqual(provider.doc)
 })
 
@@ -36,7 +36,7 @@ test('tracks version from sync', async () => {
 	const server = new DummyServer()
 	const client = mockClient(server)
 	const provider = new HttpProvider(new Y.Doc(), client)
-	update(provider.doc)
+	updateDoc(provider)
 	await provider.connect()
 	expect(provider.version).toBeGreaterThan(0)
 	expect(provider.version).toBe(server.version)
@@ -49,7 +49,7 @@ test('applies updates received from sync', async () => {
 	])
 	const client = mockClient(server)
 	const provider = new HttpProvider(new Y.Doc(), client)
-	update(provider.doc)
+	updateDoc(provider)
 	await provider.connect()
 	expect(provider.doc.getXmlFragment('default')).toMatchInlineSnapshot(
 		`"<paragraph>Hi</paragraph>"`,
@@ -61,7 +61,7 @@ test('syncs docs via server on connection', async () => {
 	const server = new DummyServer()
 	const provider1 = new HttpProvider(new Y.Doc(), (mockClient(server)))
 	const provider2 = new HttpProvider(new Y.Doc(), (mockClient(server)))
-	update(provider1.doc)
+	updateDoc(provider1)
 	await provider1.connect()
 	await provider2.connect()
 	expect(provider2.doc).toEqual(provider1.doc)
@@ -72,7 +72,7 @@ test('syncs awareness via server on connection', async () => {
 	const provider1 = new HttpProvider(new Y.Doc(), (mockClient(server)))
 	const provider2 = new HttpProvider(new Y.Doc(), (mockClient(server)))
 	expect(provider2.awareness.getStates().size).toEqual(1)
-	provider1.awareness.setLocalStateField('user', { name: 'me' })
+	updateAwareness(provider1)
 	await provider1.connect()
 	await provider2.connect()
 	expect(provider2.awareness.getStates().size).toEqual(2)
