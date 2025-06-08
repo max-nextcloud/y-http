@@ -80,14 +80,18 @@ export class HttpProvider extends ObservableV2<Events> {
             data,
         )
         this.#lastSync = now
-        response?.data?.forEach(update => {
-            const arr = fromBase64(update)
-            this.#applyUpdate(this.#remoteDoc, arr)
-            this.#applyUpdate(this.doc, arr)
+        response?.data?.forEach(encoded => {
+            const message = fromBase64(encoded)
+            this.#receive(message)
         })
         if (response?.version) {
             this.version = response.version
         }
+    }
+
+    #receive(message: Uint8Array<ArrayBufferLike>) {
+        this.#applyUpdate(this.#remoteDoc, message)
+        this.#applyUpdate(this.doc, message)
     }
 
     #applyUpdate(doc: Y.Doc, arr: Uint8Array<ArrayBufferLike>) {
