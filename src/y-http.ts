@@ -1,5 +1,5 @@
 import { fromBase64, toBase64 } from 'lib0/buffer.js'
-import { clone, Decoder, readUint8 } from 'lib0/decoding.js'
+import { clone, Decoder, readUint8, readVarUint8Array } from 'lib0/decoding.js'
 import {
 	createEncoder,
 	Encoder,
@@ -9,7 +9,7 @@ import {
 } from 'lib0/encoding.js'
 import { ObservableV2 } from 'lib0/observable.js'
 import { readUpdate, writeUpdate } from 'y-protocols/sync.js'
-import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
+import { applyAwarenessUpdate, Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
 interface Connection {}
@@ -59,6 +59,7 @@ export class HttpProvider extends ObservableV2<Events> {
 			}
 		})
 		this.#messageHandlers[messageSync] = this.#handleSyncMessage
+		this.#messageHandlers[messageAwareness] = this.#handleAwarenessMessage
 	}
 
 	#triggerSync() {
@@ -103,6 +104,10 @@ export class HttpProvider extends ObservableV2<Events> {
 		const dec2 = clone(dec)
 		readUpdate(dec, this.doc, this)
 		readUpdate(dec2, this.#remoteDoc, this)
+	}
+
+	#handleAwarenessMessage(dec: Decoder) {
+		applyAwarenessUpdate(this.awareness, readVarUint8Array(dec), this)
 	}
 
 	get syncUpdate() {

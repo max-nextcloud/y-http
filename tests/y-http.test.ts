@@ -59,12 +59,21 @@ test('applies updates received from sync', async () => {
 
 test('syncs docs via server on connection', async () => {
 	const server = new DummyServer()
-	const client1 = mockClient(server)
-	const client2 = mockClient(server)
-	const provider1 = new HttpProvider(new Y.Doc(), client1)
-	const provider2 = new HttpProvider(new Y.Doc(), client2)
+	const provider1 = new HttpProvider(new Y.Doc(), (mockClient(server)))
+	const provider2 = new HttpProvider(new Y.Doc(), (mockClient(server)))
 	update(provider1.doc)
 	await provider1.connect()
 	await provider2.connect()
 	expect(provider2.doc).toEqual(provider1.doc)
+})
+
+test('syncs awareness via server on connection', async () => {
+	const server = new DummyServer()
+	const provider1 = new HttpProvider(new Y.Doc(), (mockClient(server)))
+	const provider2 = new HttpProvider(new Y.Doc(), (mockClient(server)))
+	expect(provider2.awareness.getStates().size).toEqual(1)
+	provider1.awareness.setLocalStateField('user', { name: 'me' })
+	await provider1.connect()
+	await provider2.connect()
+	expect(provider2.awareness.getStates().size).toEqual(2)
 })
