@@ -1,18 +1,20 @@
 {
   "name": "y-http",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "test": "vitest"
   },
-  "devDependencies": {
-    "typescript": "~5.7.2",
-    "vitest": "^3.1.2"
-  },
+  "prettier": "@nextcloud/prettier-config",
   "dependencies": {
     "lib0": "^0.2.105",
     "y-protocols": "^1.0.6",
     "yjs": "^13.6.26"
+  },
+  "devDependencies": {
+    "@nextcloud/prettier-config": "^1.2.0",
+    "typescript": "~5.7.2",
+    "vitest": "^3.1.2"
   }
 }
