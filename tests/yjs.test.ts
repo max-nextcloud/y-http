@@ -1,6 +1,6 @@
 import * as Y from 'yjs'
 import * as sync from 'y-protocols/sync'
-import { Encoder, toUint8Array, writeUint8 } from 'lib0/encoding.js'
+import { createEncoder, toUint8Array, writeUint8 } from 'lib0/encoding.js'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { toBase64 } from 'lib0/buffer.js'
 
@@ -50,7 +50,7 @@ test('using send with y-protocols', () => {
 	const doc1 = new Y.Doc()
 	const send = vi.fn()
 	doc1.on('update', (update) => {
-		const enc = new Encoder()
+		const enc = createEncoder()
 		writeUint8(enc, 0)
 		sync.writeUpdate(enc, update)
 		const data = toUint8Array(enc)

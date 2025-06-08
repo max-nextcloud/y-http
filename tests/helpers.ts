@@ -2,7 +2,7 @@ import { expect } from 'vitest'
 import * as Y from 'yjs'
 import * as sync from 'y-protocols/sync'
 import { fromBase64 } from 'lib0/buffer.js'
-import { Decoder, readUint8 } from 'lib0/decoding.js'
+import { createDecoder, readUint8 } from 'lib0/decoding.js'
 import { messageSync } from '../src/y-http.ts'
 import { Awareness } from 'y-protocols/awareness.js'
 
@@ -13,7 +13,7 @@ export function docWith(updates: string[]): Y.Doc {
 }
 
 export function receive(dest: Y.Doc, data: string) {
-	const dec = new Decoder(fromBase64(data))
+	const dec = createDecoder(fromBase64(data))
 	if (readUint8(dec) !== messageSync) {
 		return
 	}

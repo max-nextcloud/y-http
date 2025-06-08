@@ -62,8 +62,8 @@ test('include an awareness message', async () => {
 	expect(message[0]).toBe(messageAwareness)
 })
 
-Object.entries({doc: updateDoc, awareness: updateAwareness})
-	.forEach(([key, fn]) => {
+Object.entries({ doc: updateDoc, awareness: updateAwareness }).forEach(
+	([key, fn]) => {
 		test(`${key} changes trigger sync with interval`, async () => {
 			const client = mockClient()
 			const provider = new HttpProvider(new Y.Doc(), client)
@@ -75,7 +75,8 @@ Object.entries({doc: updateDoc, awareness: updateAwareness})
 			vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
 			expect(client.sync).toHaveBeenCalledTimes(2)
 		})
-})
+	},
+)
 
 test.todo('do not resend received updates')
 test.todo('resend updates send during failed request')

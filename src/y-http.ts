@@ -1,15 +1,24 @@
 import { fromBase64, toBase64 } from 'lib0/buffer.js'
-import { clone, Decoder, readUint8, readVarUint8Array } from 'lib0/decoding.js'
+import {
+	clone,
+	createDecoder,
+	Decoder,
+	readUint8,
+	readVarUint8Array,
+} from 'lib0/decoding.js'
 import {
 	createEncoder,
-	Encoder,
 	toUint8Array,
 	writeVarUint,
 	writeVarUint8Array,
 } from 'lib0/encoding.js'
 import { ObservableV2 } from 'lib0/observable.js'
 import { readUpdate, writeUpdate } from 'y-protocols/sync.js'
-import { applyAwarenessUpdate, Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
+import {
+	applyAwarenessUpdate,
+	Awareness,
+	encodeAwarenessUpdate,
+} from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
 interface Connection {}
@@ -29,9 +38,9 @@ interface Events {
 }
 
 export const messageSync = 0
-export const messageQueryAwareness = 3
 export const messageAwareness = 1
 export const messageAuth = 2
+export const messageQueryAwareness = 3
 
 export const MIN_INTERVAL_BETWEEN_SYNCS = 100 // milliseconds
 
@@ -98,7 +107,7 @@ export class HttpProvider extends ObservableV2<Events> {
 	}
 
 	#receive(message: Uint8Array<ArrayBufferLike>) {
-		const dec = new Decoder(message)
+		const dec = createDecoder(message)
 		const kind = readUint8(dec)
 		this.#messageHandlers[kind]?.apply(this, [dec])
 	}
@@ -114,23 +123,23 @@ export class HttpProvider extends ObservableV2<Events> {
 		applyAwarenessUpdate(this.awareness, readVarUint8Array(dec), this)
 	}
 
-	get syncUpdate() {
+	get syncUpdate(): string {
 		const remoteStateVec = Y.encodeStateVector(this.#remoteDoc)
 		const update = Y.encodeStateAsUpdate(this.doc, remoteStateVec)
 		// leave out empty updates.
 		if (update.length === 2) {
 			return ''
 		}
-		const enc = new Encoder()
+		const enc = createEncoder()
 		writeVarUint(enc, messageSync)
 		writeUpdate(enc, update)
 		const arr = toUint8Array(enc)
 		return toBase64(arr)
 	}
 
-	get awarenessUpdate() {
+	get awarenessUpdate(): string {
 		if (this.awareness.getLocalState() === null) {
-			return
+			return ''
 		}
 		const enc = createEncoder()
 		writeVarUint(enc, messageAwareness)

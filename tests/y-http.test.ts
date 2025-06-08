@@ -59,8 +59,8 @@ test('applies updates received from sync', async () => {
 
 test('syncs docs via server on connection', async () => {
 	const server = new DummyServer()
-	const provider1 = new HttpProvider(new Y.Doc(), (mockClient(server)))
-	const provider2 = new HttpProvider(new Y.Doc(), (mockClient(server)))
+	const provider1 = new HttpProvider(new Y.Doc(), mockClient(server))
+	const provider2 = new HttpProvider(new Y.Doc(), mockClient(server))
 	updateDoc(provider1)
 	await provider1.connect()
 	await provider2.connect()
@@ -69,8 +69,8 @@ test('syncs docs via server on connection', async () => {
 
 test('syncs awareness via server on connection', async () => {
 	const server = new DummyServer()
-	const provider1 = new HttpProvider(new Y.Doc(), (mockClient(server)))
-	const provider2 = new HttpProvider(new Y.Doc(), (mockClient(server)))
+	const provider1 = new HttpProvider(new Y.Doc(), mockClient(server))
+	const provider2 = new HttpProvider(new Y.Doc(), mockClient(server))
 	expect(provider2.awareness.getStates().size).toEqual(1)
 	updateAwareness(provider1)
 	await provider1.connect()
