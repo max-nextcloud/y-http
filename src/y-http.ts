@@ -9,7 +9,7 @@ import * as Y from 'yjs'
 
 interface Connection {}
 
-interface HttpApi {
+interface YHttpClient {
     open: (clientId: number) => Promise<Connection>,
     sync: (connection: Connection, data?: string[]) => Promise<syncResponse>,
 }
@@ -33,19 +33,19 @@ export const MIN_INTERVAL_BETWEEN_SYNCS = 100 // milliseconds
 export class HttpProvider extends ObservableV2<Events> {
     doc: Y.Doc
     #remoteDoc: Y.Doc
-    api: HttpApi
+    client: YHttpClient
     version = 0
     connection?: Connection
     #lastSync = 0
     #pendingSync = 0
     awareness: Awareness
 
-    constructor(doc: Y.Doc, api: HttpApi) {
+    constructor(doc: Y.Doc, client: YHttpClient) {
         super()
         this.doc = doc
         this.awareness = new Awareness(doc)
         this.#remoteDoc = new Y.Doc()
-        this.api = api
+        this.client = client
         doc.on('updateV2', (_update, origin) => {
             if (origin !== this) {
                 console.log('update')
@@ -75,7 +75,7 @@ export class HttpProvider extends ObservableV2<Events> {
             this.syncUpdate,
             this.awarenessUpdate,
         ].filter(u => u) as string[] // filter out the undefined and empty entries.
-        const response = await this.api.sync(
+        const response = await this.client.sync(
             this.connection,
             data,
         )
@@ -132,7 +132,7 @@ export class HttpProvider extends ObservableV2<Events> {
     }
 
     async connect(): Promise<void> {
-        this.connection = await this.api.open(this.doc.clientID)
+        this.connection = await this.client.open(this.doc.clientID)
             ?.catch(err => {
                 this.emit('connection-error', [err, this])
                 return undefined

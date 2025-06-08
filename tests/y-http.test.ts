@@ -2,7 +2,7 @@ import * as Y from 'yjs'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { HttpProvider, messageAwareness } from '../src/y-http'
 import { DummyServer } from './DummyServer.ts'
-import { mockApi } from './mockApi.ts'
+import { mockClient } from './mockClient.ts'
 import { update, docWith } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
 
@@ -16,20 +16,20 @@ afterEach(() =>
 
 test('Instantiating the provider with a doc', () => {
     const doc = new Y.Doc()
-    const provider = new HttpProvider(doc, mockApi())
+    const provider = new HttpProvider(doc, mockClient())
     expect(provider.doc).toBe(doc)
     expect(provider.syncUpdate).toBeFalsy
     expect(provider.version).toBe(0)
 })
 
 test('exposes sync updates', () => {
-    const provider = new HttpProvider(new Y.Doc(), mockApi())
+    const provider = new HttpProvider(new Y.Doc(), mockClient())
     update(provider.doc)
     expect(docWith([provider.syncUpdate])).toEqual(provider.doc)
 })
 
 test('exposes awareness message', () => {
-    const provider = new HttpProvider(new Y.Doc(), mockApi())
+    const provider = new HttpProvider(new Y.Doc(), mockClient())
     provider.awareness.setLocalStateField('user', { name: 'me' })
     expect(typeof provider.awarenessUpdate).toBe('string')
     const message = fromBase64(provider.awarenessUpdate as string)
@@ -38,8 +38,8 @@ test('exposes awareness message', () => {
 
 test('tracks version from sync', async () => {
     const server = new DummyServer()
-    const api = mockApi(server)
-    const provider = new HttpProvider(new Y.Doc(), api)
+    const client = mockClient(server)
+    const provider = new HttpProvider(new Y.Doc(), client)
     update(provider.doc)
     await provider.connect()
     expect(provider.version).toBeGreaterThan(0)
@@ -51,19 +51,19 @@ test('applies updates received from sync', async () => {
         "AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA==",
         "AAISAQHYidydCwOE2IncnQsCAWkA",
     ])
-    const api = mockApi(server)
-    const provider = new HttpProvider(new Y.Doc(), api)
+    const client = mockClient(server)
+    const provider = new HttpProvider(new Y.Doc(), client)
     update(provider.doc)
     await provider.connect()
     expect(provider.doc.getXmlFragment('default'))
         .toMatchInlineSnapshot(`"<paragraph>Hi</paragraph>"`)
-    expect(api.sync).toHaveBeenCalledOnce()
+    expect(client.sync).toHaveBeenCalledOnce()
 })
 
 test('syncs docs via server on connection', async () => {
     const server = new DummyServer()
-    const client1 = mockApi(server)
-    const client2 = mockApi(server)
+    const client1 = mockClient(server)
+    const client2 = mockClient(server)
     const provider1 = new HttpProvider(new Y.Doc(), client1)
     const provider2 = new HttpProvider(new Y.Doc(), client2)
     update(provider1.doc)

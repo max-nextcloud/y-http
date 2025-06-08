@@ -1,33 +1,33 @@
 import * as Y from 'yjs'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { HttpProvider } from '../src/y-http'
-import { mockApi } from './mockApi.ts'
+import { mockClient } from './mockClient.ts'
 
 beforeEach(() =>
     vi.resetAllMocks()
 )
 
-test('connect using the api', () => {
+test('connect using the client', () => {
     const doc = new Y.Doc()
-    const api = mockApi()
-    const provider = new HttpProvider(doc, api)
+    const client = mockClient()
+    const provider = new HttpProvider(doc, client)
     provider.connect()
-    expect(api.open).toHaveBeenCalled()
-    expect(api.open.mock.lastCall).toEqual([doc.clientID])
+    expect(client.open).toHaveBeenCalled()
+    expect(client.open.mock.lastCall).toEqual([doc.clientID])
 })
 
 test('exposes connection', async () => {
-    const api = mockApi()
-    const provider = new HttpProvider(new Y.Doc(), api)
+    const client = mockClient()
+    const provider = new HttpProvider(new Y.Doc(), client)
     await provider.connect()
-    expect(provider.connection).toBe(api._connection)
+    expect(provider.connection).toBe(client._connection)
 })
 
 test('emit error when failing to connect', async () => {
-    const api = mockApi()
+    const client = mockClient()
     const err = new Error
-    api.open.mockRejectedValue(err)
-    const provider = new HttpProvider(new Y.Doc(), api)
+    client.open.mockRejectedValue(err)
+    const provider = new HttpProvider(new Y.Doc(), client)
     const onErr = vi.fn()
     provider.on('connection-error', onErr)
     await provider.connect()
