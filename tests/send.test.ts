@@ -20,7 +20,7 @@ test('sends updates', async () => {
         "AAISAQHYidydCwOE2IncnQsCAWkA",
     ])
     const api = mockApi(server)
-    const provider = new HttpProvider('url', new Y.Doc(), api)
+    const provider = new HttpProvider(new Y.Doc(), api)
     await provider.connect()
     update(provider.doc)
     vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
@@ -37,7 +37,7 @@ test('sends updates', async () => {
 
 test('sends pending updates after connecting', async () => {
     const api = mockApi()
-    const provider = new HttpProvider('url', new Y.Doc(), api)
+    const provider = new HttpProvider(new Y.Doc(), api)
     update(provider.doc)
     expect(provider.syncUpdate).toBeTruthy
     expect(api.sync)
@@ -49,7 +49,7 @@ test('sends pending updates after connecting', async () => {
 
 test('send at most one request every maxFrequency ms', async () => {
     const api = mockApi()
-    const provider = new HttpProvider('url', new Y.Doc(), api)
+    const provider = new HttpProvider(new Y.Doc(), api)
     await provider.connect()
     expect(api.sync).toHaveBeenCalledTimes(1)
     update(provider.doc)
@@ -61,7 +61,7 @@ test('send at most one request every maxFrequency ms', async () => {
 
 test('include an awareness message', async () => {
     const api = mockApi()
-    const provider = new HttpProvider('url', new Y.Doc(), api)
+    const provider = new HttpProvider(new Y.Doc(), api)
     provider.awareness.setLocalStateField('user', { name: 'me' })
     await provider.connect()
     expect(api.sync).toHaveBeenCalledTimes(1)

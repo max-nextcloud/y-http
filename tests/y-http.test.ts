@@ -16,20 +16,20 @@ afterEach(() =>
 
 test('Instantiating the provider with a doc', () => {
     const doc = new Y.Doc()
-    const provider = new HttpProvider('url', doc, mockApi())
+    const provider = new HttpProvider(doc, mockApi())
     expect(provider.doc).toBe(doc)
     expect(provider.syncUpdate).toBeFalsy
     expect(provider.version).toBe(0)
 })
 
 test('exposes sync updates', () => {
-    const provider = new HttpProvider('url', new Y.Doc(), mockApi())
+    const provider = new HttpProvider(new Y.Doc(), mockApi())
     update(provider.doc)
     expect(docWith([provider.syncUpdate])).toEqual(provider.doc)
 })
 
 test('exposes awareness message', () => {
-    const provider = new HttpProvider('url', new Y.Doc(), mockApi())
+    const provider = new HttpProvider(new Y.Doc(), mockApi())
     provider.awareness.setLocalStateField('user', { name: 'me' })
     expect(typeof provider.awarenessUpdate).toBe('string')
     const message = fromBase64(provider.awarenessUpdate as string)
@@ -39,7 +39,7 @@ test('exposes awareness message', () => {
 test('tracks version from sync', async () => {
     const server = new DummyServer()
     const api = mockApi(server)
-    const provider = new HttpProvider('url', new Y.Doc(), api)
+    const provider = new HttpProvider(new Y.Doc(), api)
     update(provider.doc)
     await provider.connect()
     expect(provider.version).toBeGreaterThan(0)
@@ -52,7 +52,7 @@ test('applies updates received from sync', async () => {
         "AAISAQHYidydCwOE2IncnQsCAWkA",
     ])
     const api = mockApi(server)
-    const provider = new HttpProvider('url', new Y.Doc(), api)
+    const provider = new HttpProvider(new Y.Doc(), api)
     update(provider.doc)
     await provider.connect()
     expect(provider.doc.getXmlFragment('default'))
@@ -64,8 +64,8 @@ test('syncs docs via server on connection', async () => {
     const server = new DummyServer()
     const client1 = mockApi(server)
     const client2 = mockApi(server)
-    const provider1 = new HttpProvider('url', new Y.Doc(), client1)
-    const provider2 = new HttpProvider('url', new Y.Doc(), client2)
+    const provider1 = new HttpProvider(new Y.Doc(), client1)
+    const provider2 = new HttpProvider(new Y.Doc(), client2)
     update(provider1.doc)
     await provider1.connect()
     await provider2.connect()

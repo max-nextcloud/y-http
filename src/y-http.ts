@@ -10,7 +10,7 @@ import * as Y from 'yjs'
 interface Connection {}
 
 interface HttpApi {
-    open?: (url: string) => Promise<Connection>,
+    open?: () => Promise<Connection>,
     sync: (connection: Connection, data?: string[]) => Promise<syncResponse>,
 }
 
@@ -31,7 +31,6 @@ export const messageAuth = 2
 export const MIN_INTERVAL_BETWEEN_SYNCS = 100 // milliseconds
 
 export class HttpProvider extends ObservableV2<Events> {
-    url: string
     doc: Y.Doc
     #remoteDoc: Y.Doc
     api: HttpApi
@@ -41,9 +40,8 @@ export class HttpProvider extends ObservableV2<Events> {
     #pendingSync = 0
     awareness: Awareness
 
-    constructor(url: string, doc: Y.Doc, api: HttpApi) {
+    constructor(doc: Y.Doc, api: HttpApi) {
         super()
-        this.url = url
         this.doc = doc
         this.awareness = new Awareness(doc)
         this.#remoteDoc = new Y.Doc()
@@ -134,7 +132,7 @@ export class HttpProvider extends ObservableV2<Events> {
     }
 
     async connect(): Promise<void> {
-        this.connection = await this.api.open?.(this.url)
+        this.connection = await this.api.open?.()
             ?.catch(err => {
                 this.emit('connection-error', [err, this])
                 return undefined
