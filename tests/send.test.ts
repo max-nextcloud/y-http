@@ -25,8 +25,8 @@ test('sends updates', async () => {
     update(provider.doc)
     vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
     expect(api.sync)
-        .toHaveBeenCalledWith('url', api._connection, [provider.syncUpdate, provider.awarenessUpdate])
-    const updates = api.sync.mock.lastCall?.[2]
+        .toHaveBeenCalledWith(api._connection, [provider.syncUpdate, provider.awarenessUpdate])
+    const updates = api.sync.mock.lastCall?.[1]
     expect(updates.length).toBe(2) // awareness and sync
     expect(docWith(updates)).toEqual(provider.doc)
     expect(provider.doc.getXmlFragment('default'))
@@ -44,7 +44,7 @@ test('sends pending updates after connecting', async () => {
         .not.toHaveBeenCalled()
     await provider.connect()
     expect(api.sync)
-        .toHaveBeenCalledWith('url', api._connection, [provider.syncUpdate, provider.awarenessUpdate])
+        .toHaveBeenCalledWith(api._connection, [provider.syncUpdate, provider.awarenessUpdate])
 })
 
 test('send at most one request every maxFrequency ms', async () => {
@@ -65,7 +65,7 @@ test('include an awareness message', async () => {
     provider.awareness.setLocalStateField('user', { name: 'me' })
     await provider.connect()
     expect(api.sync).toHaveBeenCalledTimes(1)
-    const updates = api.sync.mock.lastCall?.[2]
+    const updates = api.sync.mock.lastCall?.[1]
     // awareness update only
     expect(updates.length).toBe(1)
     const message = fromBase64(updates[0])

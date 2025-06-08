@@ -11,7 +11,7 @@ interface Connection {}
 
 interface HttpApi {
     open?: (url: string) => Promise<Connection>,
-    sync: (url: string, connection: Connection, data?: string[]) => Promise<syncResponse>,
+    sync: (connection: Connection, data?: string[]) => Promise<syncResponse>,
 }
 
 interface syncResponse {
@@ -78,7 +78,6 @@ export class HttpProvider extends ObservableV2<Events> {
             this.awarenessUpdate,
         ].filter(u => u) as string[] // filter out the undefined and empty entries.
         const response = await this.api.sync(
-            this.url,
             this.connection,
             data,
         )

@@ -7,7 +7,7 @@ export function mockApi(server?: DummyServer) {
     open.mockResolvedValue(_connection)
     const sync = vi.fn()
     if (server) {
-        sync.mockImplementation(async (_url, _con, updates) => {
+        sync.mockImplementation(async (_con, updates) => {
             server.receive(updates)
             // TODO: handle version arg to sync
             return server.respond(0)
