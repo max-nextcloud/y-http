@@ -10,7 +10,7 @@ import * as Y from 'yjs'
 interface Connection {}
 
 interface HttpApi {
-    open?: () => Promise<Connection>,
+    open: (clientId: number) => Promise<Connection>,
     sync: (connection: Connection, data?: string[]) => Promise<syncResponse>,
 }
 
@@ -132,7 +132,7 @@ export class HttpProvider extends ObservableV2<Events> {
     }
 
     async connect(): Promise<void> {
-        this.connection = await this.api.open?.()
+        this.connection = await this.api.open(this.doc.clientID)
             ?.catch(err => {
                 this.emit('connection-error', [err, this])
                 return undefined

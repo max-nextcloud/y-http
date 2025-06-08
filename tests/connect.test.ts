@@ -8,10 +8,12 @@ beforeEach(() =>
 )
 
 test('connect using the api', () => {
+    const doc = new Y.Doc()
     const api = mockApi()
-    const provider = new HttpProvider(new Y.Doc(), api)
+    const provider = new HttpProvider(doc, api)
     provider.connect()
     expect(api.open).toHaveBeenCalled()
+    expect(api.open.mock.lastCall).toEqual([doc.clientID])
 })
 
 test('exposes connection', async () => {
