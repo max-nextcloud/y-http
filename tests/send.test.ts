@@ -2,6 +2,7 @@ import * as Y from 'yjs'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import {
 	HttpProvider,
+	MAX_INTERVAL_BETWEEN_SYNCS,
 	messageAwareness,
 	MIN_INTERVAL_BETWEEN_SYNCS,
 } from '../src/y-http'
@@ -77,6 +78,23 @@ Object.entries({ doc: updateDoc, awareness: updateAwareness }).forEach(
 		})
 	},
 )
+
+test('sends awareness update every 10 seconds', async () => {
+	const client = mockClient()
+	const provider = new HttpProvider(new Y.Doc(), client)
+	updateAwareness(provider)
+	await provider.connect()
+	expect(client.sync).toHaveBeenCalledTimes(1)
+	vi.advanceTimersByTime(MAX_INTERVAL_BETWEEN_SYNCS)
+	expect(client.sync).toHaveBeenCalledTimes(2)
+	// awareness update only
+	const updates = client.sync.mock.lastCall?.[1]
+	expect(updates.length).toBe(1)
+	const message = fromBase64(updates[0])
+	expect(message[0]).toBe(messageAwareness)
+	vi.advanceTimersByTime(3 * MAX_INTERVAL_BETWEEN_SYNCS)
+	expect(client.sync).toHaveBeenCalledTimes(5)
+})
 
 test.todo('do not resend received updates')
 test.todo('resend updates send during failed request')

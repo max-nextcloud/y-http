@@ -42,7 +42,10 @@ export const messageAwareness = 1
 export const messageAuth = 2
 export const messageQueryAwareness = 3
 
-export const MIN_INTERVAL_BETWEEN_SYNCS = 100 // milliseconds
+// throttle requests to at most 5 per second
+export const MIN_INTERVAL_BETWEEN_SYNCS = 200 // milliseconds
+// ensure connected users remain in awareness state
+export const MAX_INTERVAL_BETWEEN_SYNCS = 10_000 // milliseconds
 
 export class HttpProvider extends ObservableV2<Events> {
 	doc: Y.Doc
@@ -52,6 +55,7 @@ export class HttpProvider extends ObservableV2<Events> {
 	connection?: Connection
 	#lastSync = 0
 	#pendingSync = 0
+	#awarenessInterval = 0
 	awareness: Awareness
 	#messageHandlers: ((this: HttpProvider, dec: Decoder) => void)[] = []
 
@@ -73,6 +77,10 @@ export class HttpProvider extends ObservableV2<Events> {
 		})
 		this.#messageHandlers[messageSync] = this.#handleSyncMessage
 		this.#messageHandlers[messageAwareness] = this.#handleAwarenessMessage
+		this.#awarenessInterval = setInterval(
+			this.#triggerSync.bind(this),
+			MAX_INTERVAL_BETWEEN_SYNCS
+		)
 	}
 
 	#triggerSync() {
@@ -157,5 +165,9 @@ export class HttpProvider extends ObservableV2<Events> {
 			return undefined
 		})
 		this.#sync()
+	}
+
+	destroy(): void {
+		clearInterval(this.#awarenessInterval)
 	}
 }
