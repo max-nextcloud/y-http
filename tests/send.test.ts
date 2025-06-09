@@ -21,19 +21,20 @@ afterEach(() => {
 
 test('sends updates', async () => {
 	const server = new DummyServer()
-	const client = mockClient(server)
+	const client = mockClient({ server })
 	const provider = new HttpProvider(new Y.Doc(), client)
 	await provider.connect()
 	updateDoc(provider)
 	vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
-	expect(client.sync).toHaveBeenCalledWith(client._connection, [
-		provider.syncUpdate,
-		provider.awarenessUpdate,
-	])
-	const updates = client.sync.mock.lastCall?.[1]
-	expect(updates.length).toBe(2) // awareness and sync
+	expect(client.sync).toHaveBeenCalledWith(provider.connection, {
+		sync: [provider.syncUpdate],
+		awareness: provider.awarenessUpdate,
+		clientId: provider.doc.clientID,
+	})
+	const updates = client.sync.mock.lastCall?.[1].sync ?? []
 	expect(docWith(updates)).toEqual(provider.doc)
-	await vi.waitUntil(() => !provider.syncUpdate)
+	expect(provider.syncUpdate).not.toBe('')
+	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
 	expect(provider.syncUpdate).toBe('')
 })
 
@@ -44,10 +45,11 @@ test('sends pending updates after connecting', async () => {
 	expect(provider.syncUpdate).toBeTruthy
 	expect(client.sync).not.toHaveBeenCalled()
 	await provider.connect()
-	expect(client.sync).toHaveBeenCalledWith(client._connection, [
-		provider.syncUpdate,
-		provider.awarenessUpdate,
-	])
+	expect(client.sync).toHaveBeenCalledWith(provider.connection, {
+		sync: [provider.syncUpdate],
+		awareness: provider.awarenessUpdate,
+		clientId: provider.doc.clientID,
+	})
 })
 
 test('include an awareness message', async () => {
@@ -56,10 +58,10 @@ test('include an awareness message', async () => {
 	updateAwareness(provider)
 	await provider.connect()
 	expect(client.sync).toHaveBeenCalledTimes(1)
-	const updates = client.sync.mock.lastCall?.[1]
+	const { awareness, sync } = client.sync.mock.lastCall?.[1] ?? {}
 	// awareness update only
-	expect(updates.length).toBe(1)
-	const message = fromBase64(updates[0])
+	expect(sync).toEqual([''])
+	const message = fromBase64(awareness as string)
 	expect(message[0]).toBe(messageAwareness)
 })
 
@@ -87,10 +89,10 @@ test('sends awareness update every 10 seconds', async () => {
 	expect(client.sync).toHaveBeenCalledTimes(1)
 	vi.advanceTimersByTime(MAX_INTERVAL_BETWEEN_SYNCS)
 	expect(client.sync).toHaveBeenCalledTimes(2)
+	const { awareness, sync } = client.sync.mock.lastCall?.[1] ?? {}
 	// awareness update only
-	const updates = client.sync.mock.lastCall?.[1]
-	expect(updates.length).toBe(1)
-	const message = fromBase64(updates[0])
+	expect(sync).toEqual([''])
+	const message = fromBase64(awareness as string)
 	expect(message[0]).toBe(messageAwareness)
 	vi.advanceTimersByTime(3 * MAX_INTERVAL_BETWEEN_SYNCS)
 	expect(client.sync).toHaveBeenCalledTimes(5)

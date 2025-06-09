@@ -21,20 +21,27 @@ import {
 } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
-interface Connection {}
-
-interface YHttpClient {
-	open: (clientId: number) => Promise<Connection>
-	sync: (connection: Connection, data?: string[]) => Promise<syncResponse>
+interface Connection {
+	fileId?: number
 }
 
-interface syncResponse {
-	data: string[]
+export interface YHttpClient {
+	open: (clientId: number) => Promise<Connection>
+	sync: (
+		connection: Connection,
+		data: { sync: string[]; awareness: string; clientId: number },
+	) => Promise<SyncResponse>
+}
+
+export interface SyncResponse {
+	sync: string[]
+	awareness: { [k: string]: string }
 	version: number
 }
 
 interface Events {
 	'connection-error': (error: Error, provider: HttpProvider) => any
+	sync: (state: boolean) => any
 }
 
 export const messageSync = 0
@@ -58,6 +65,7 @@ export class HttpProvider extends ObservableV2<Events> {
 	#awarenessInterval = 0
 	awareness: Awareness
 	#messageHandlers: ((this: HttpProvider, dec: Decoder) => void)[] = []
+	_synced = false
 
 	constructor(doc: Y.Doc, client: YHttpClient) {
 		super()
@@ -67,6 +75,7 @@ export class HttpProvider extends ObservableV2<Events> {
 		this.client = client
 		doc.on('updateV2', (_update, origin): void => {
 			if (origin !== this) {
+				this.synced = false
 				this.#triggerSync()
 			}
 		})
@@ -79,7 +88,7 @@ export class HttpProvider extends ObservableV2<Events> {
 		this.#messageHandlers[messageAwareness] = this.#handleAwarenessMessage
 		this.#awarenessInterval = setInterval(
 			this.#triggerSync.bind(this),
-			MAX_INTERVAL_BETWEEN_SYNCS
+			MAX_INTERVAL_BETWEEN_SYNCS,
 		)
 	}
 
@@ -100,18 +109,25 @@ export class HttpProvider extends ObservableV2<Events> {
 			return
 		}
 		const now = Date.now()
-		const data = [this.syncUpdate, this.awarenessUpdate].filter(
-			(u) => u,
-		) as string[] // filter out the undefined and empty entries.
+		const data = {
+			sync: [this.syncUpdate],
+			awareness: this.awarenessUpdate,
+			clientId: this.doc.clientID,
+		}
 		const response = await this.client.sync(this.connection, data)
 		this.#lastSync = now
-		response?.data?.forEach((encoded) => {
+		const messages: string[] = [
+			...response.sync,
+			...Object.values(response.awareness),
+		] // todo check awareness clientIds
+		messages.forEach((encoded) => {
 			const message = fromBase64(encoded)
 			this.#receive(message)
 		})
 		if (response?.version) {
 			this.version = response.version
 		}
+		this.synced = true
 	}
 
 	#receive(message: Uint8Array<ArrayBufferLike>) {
@@ -129,6 +145,17 @@ export class HttpProvider extends ObservableV2<Events> {
 
 	#handleAwarenessMessage(dec: Decoder) {
 		applyAwarenessUpdate(this.awareness, readVarUint8Array(dec), this)
+	}
+
+	get synced() {
+		return this._synced
+	}
+
+	set synced(state) {
+		if (this._synced !== state) {
+			this._synced = state
+			this.emit('sync', [state])
+		}
 	}
 
 	get syncUpdate(): string {
@@ -159,12 +186,13 @@ export class HttpProvider extends ObservableV2<Events> {
 		return toBase64(arr)
 	}
 
-	async connect(): Promise<void> {
-		this.connection = await this.client.open(this.doc.clientID)?.catch((err) => {
+	async connect(): Promise<Connection> {
+		this.connection = await this.client.open(this.doc.clientID).catch((err) => {
 			this.emit('connection-error', [err, this])
-			return undefined
+			throw err
 		})
 		this.#sync()
+		return this.connection
 	}
 
 	destroy(): void {

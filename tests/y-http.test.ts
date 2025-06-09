@@ -1,79 +1,104 @@
 import * as Y from 'yjs'
-import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { HttpProvider, messageAwareness } from '../src/y-http'
+import { afterEach, beforeEach, expect, test as baseTest, vi } from 'vitest'
+import {
+	HttpProvider,
+	MAX_INTERVAL_BETWEEN_SYNCS,
+	messageAwareness,
+} from '../src/y-http'
 import { DummyServer } from './DummyServer.ts'
 import { mockClient } from './mockClient.ts'
-import { updateDoc, docWith, updateAwareness } from './helpers.ts'
+import { updateDoc, docWith, updateAwareness, randomFileId } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
 
-beforeEach(() => vi.useFakeTimers)
+interface ProviderFixture {
+	fileId: number
+	server: DummyServer
+	providers: HttpProvider[]
+	provider: HttpProvider
+}
 
-afterEach(() => vi.restoreAllMocks())
+const _server = new DummyServer()
 
-test('Instantiating the provider with a doc', () => {
-	const doc = new Y.Doc()
-	const provider = new HttpProvider(doc, mockClient())
-	expect(provider.doc).toBe(doc)
+const test = baseTest.extend<ProviderFixture>({
+	fileId: ({ task: _ }, use) => use(randomFileId()),
+	server: ({ task: _ }, use) => use(_server),
+	providers: async ({ fileId, server }, use) => {
+		const providers: HttpProvider[] = []
+		providers.push(new HttpProvider(new Y.Doc(), mockClient({ server, fileId })))
+		providers.push(new HttpProvider(new Y.Doc(), mockClient({ server, fileId })))
+		await use(providers)
+		providers.forEach((p) => p.destroy)
+	},
+	provider: async ({ providers }, use) => {
+		await use(providers[0])
+	},
+})
+
+beforeEach(() => {
+	vi.useFakeTimers()
+})
+
+afterEach(() => {
+	vi.restoreAllMocks()
+})
+
+test('Instantiating the provider with a doc', ({ provider }) => {
 	expect(provider.syncUpdate).toBeFalsy
 	expect(provider.version).toBe(0)
 })
 
-test('exposes sync updates', () => {
-	const provider = new HttpProvider(new Y.Doc(), mockClient())
+test('exposes sync updates', ({ provider }) => {
 	updateDoc(provider)
 	expect(docWith([provider.syncUpdate])).toEqual(provider.doc)
 })
 
-test('exposes awareness message', () => {
-	const provider = new HttpProvider(new Y.Doc(), mockClient())
+test('exposes awareness message', ({ provider }) => {
 	provider.awareness.setLocalStateField('user', { name: 'me' })
-	expect(typeof provider.awarenessUpdate).toBe('string')
-	const message = fromBase64(provider.awarenessUpdate as string)
+	const message = fromBase64(provider.awarenessUpdate)
 	expect(message[0]).toBe(messageAwareness)
 })
 
-test('tracks version from sync', async () => {
-	const server = new DummyServer()
-	const client = mockClient(server)
-	const provider = new HttpProvider(new Y.Doc(), client)
+test('tracks version from sync', async ({ provider, server, fileId }) => {
 	updateDoc(provider)
 	await provider.connect()
+	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
 	expect(provider.version).toBeGreaterThan(0)
-	expect(provider.version).toBe(server.version)
+	expect(provider.version).toBe(server.versions.get(fileId))
 })
 
-test('applies updates received from sync', async () => {
-	const server = new DummyServer([
-		'AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA==',
-		'AAISAQHYidydCwOE2IncnQsCAWkA',
-	])
-	const client = mockClient(server)
-	const provider = new HttpProvider(new Y.Doc(), client)
+test('applies updates received from sync', async ({ server, provider }) => {
+	const con = await provider.connect()
+	server.receive(con, {
+		sync: [
+			'AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA==',
+			'AAISAQHYidydCwOE2IncnQsCAWkA',
+		],
+		awareness: '',
+		clientId: 1,
+	})
 	updateDoc(provider)
-	await provider.connect()
+	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
 	expect(provider.doc.getXmlFragment('default')).toMatchInlineSnapshot(
 		`"<paragraph>Hi</paragraph>"`,
 	)
-	expect(client.sync).toHaveBeenCalledOnce()
 })
 
-test('syncs docs via server on connection', async () => {
-	const server = new DummyServer()
-	const provider1 = new HttpProvider(new Y.Doc(), mockClient(server))
-	const provider2 = new HttpProvider(new Y.Doc(), mockClient(server))
-	updateDoc(provider1)
-	await provider1.connect()
-	await provider2.connect()
-	expect(provider2.doc).toEqual(provider1.doc)
+test('syncs docs via server within one interval', async ({ providers }) => {
+	providers.map(updateDoc)
+	providers.forEach((p) => p.connect())
+	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	expect(providers[1].doc).toEqual(providers[0].doc)
 })
 
-test('syncs awareness via server on connection', async () => {
-	const server = new DummyServer()
-	const provider1 = new HttpProvider(new Y.Doc(), mockClient(server))
-	const provider2 = new HttpProvider(new Y.Doc(), mockClient(server))
-	expect(provider2.awareness.getStates().size).toEqual(1)
-	updateAwareness(provider1)
-	await provider1.connect()
-	await provider2.connect()
-	expect(provider2.awareness.getStates().size).toEqual(2)
+test('syncs awareness via server on connection', async ({ providers }) => {
+	providers.map(updateAwareness)
+	providers.forEach((p) => p.connect())
+	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	expect(providers[1].awareness.getStates().size).toEqual(2)
+	expect(providers[1].awareness.getStates()).toEqual(
+		providers[0].awareness.getStates(),
+	)
 })
