@@ -7,6 +7,13 @@ export class DummyServer {
 	awarenessMap = new Map<number, string>()
 	version = 0
 
+	seed(...sync: string[]) {
+		sync.forEach(str => {
+			this.version += Math.floor(Math.random() * 100)
+			this.syncMap.set(this.version, [str])
+		})
+	}
+
 	receive(
 		con: { fileId?: number },
 		data: { sync: string[]; awareness: string; clientId: number },

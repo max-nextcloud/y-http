@@ -65,15 +65,11 @@ test('tracks version from sync', async ({ provider, server }) => {
 })
 
 test('applies updates received from sync', async ({ server, provider }) => {
-	const con = await provider.connect()
-	server.receive(con, {
-		sync: [
-			'AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA==',
-			'AAISAQHYidydCwOE2IncnQsCAWkA',
-		],
-		awareness: '',
-		clientId: 1,
-	})
+	server.seed(
+		'AAIxAQPYidydCwAHAQdkZWZhdWx0AwlwYXJhZ3JhcGgHANiJ3J0LAAYEANiJ3J0LAQFIAA==',
+		'AAISAQHYidydCwOE2IncnQsCAWkA',
+	)
+	provider.connect()
 	updateDoc(provider)
 	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
 	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
