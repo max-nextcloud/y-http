@@ -1,35 +1,16 @@
-import * as Y from 'yjs'
-import { afterEach, beforeEach, expect, test as baseTest, vi } from 'vitest'
-import type { Mock } from 'vitest'
+import { afterEach, beforeEach, expect, vi } from 'vitest'
 import {
-	HttpProvider,
 	MAX_INTERVAL_BETWEEN_SYNCS,
 	messageAwareness,
 	MIN_INTERVAL_BETWEEN_SYNCS,
-	YHttpClient,
 } from '../src/y-http'
-import { mockClient } from './mockClient.ts'
-import { updateDoc, docWith, updateAwareness, randomFileId } from './helpers.ts'
+import { updateDoc, docWith, updateAwareness, MAX_DELAY } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
 import { DummyServer } from './DummyServer.ts'
+import { providerTest } from './providerTest.ts'
 
-interface ProviderFixture {
-	fileId: number
-	server: DummyServer
-	client: { sync: Mock<YHttpClient["sync"]>, open: Mock<YHttpClient["open"]> }
-	provider: HttpProvider
-}
-
-const test = baseTest.extend<ProviderFixture>({
-	fileId: ({ task: _ }, use) => use(randomFileId()),
-	server: ({ task: _ }, use) => use(new DummyServer()),
-	client: ({ server, fileId }, use) => use(mockClient(fileId, server)),
-	provider: async ({ client }, use) => {
-		const provider = new HttpProvider(new Y.Doc(), client)
-		await use(provider)
-		provider.destroy()
-	},
-})
+const test = providerTest
+test.scoped({ backend: new DummyServer() })
 
 beforeEach(() => {
 	vi.useFakeTimers()
@@ -52,6 +33,7 @@ test('sends updates', async ({ client, provider }) => {
 	expect(docWith(sync)).toEqual(provider.doc)
 	expect(provider.syncUpdate).not.toBe('')
 	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	await vi.advanceTimersByTimeAsync(MAX_DELAY)
 	expect(provider.syncUpdate).toBe('')
 })
 

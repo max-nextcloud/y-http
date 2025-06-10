@@ -18,15 +18,7 @@ export interface Backend {
 	respondTo: (req: Request) => Promise<Response>
 }
 
-const nullBackend: Backend = {
-	respondTo: vi.fn(async (_req) => ({
-		sync: [],
-		awareness: {},
-		version: 0,
-	}))
-}
-
-export function mockClient(fileId: number, server: Backend = nullBackend) {
+export function mockClient(fileId: number, server: Backend) {
 	const open = vi.fn<YHttpClient['open']>(async () => ({ fileId }))
 	const sync = vi.fn<YHttpClient['sync']>(async (con, data) => {
 		expect(con.fileId).toBe(fileId)

@@ -1,21 +1,7 @@
-import * as Y from 'yjs'
-import { beforeEach, expect, test as baseTest, vi } from 'vitest'
-import type { Mock } from 'vitest'
-import { HttpProvider, YHttpClient } from '../src/y-http'
-import { randomFileId } from './helpers.ts'
-import { mockClient } from './mockClient.ts'
+import { beforeEach, expect, vi } from 'vitest'
+import { providerTest } from './providerTest.ts'
 
-interface ServerlessFixture {
-	fileId: number
-	client: { sync: Mock<YHttpClient["sync"]>, open: Mock<YHttpClient["open"]> }
-	provider: HttpProvider
-}
-
-const test = baseTest.extend<ServerlessFixture>({
-	fileId: ({ task: _ }, use) => use(randomFileId()),
-	client: ({ fileId }, use) => use(mockClient(fileId)),
-	provider: ({ client }, use) => use(new HttpProvider(new Y.Doc(), client)),
-})
+const test = providerTest
 
 beforeEach(() => vi.resetAllMocks())
 

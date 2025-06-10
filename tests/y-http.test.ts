@@ -1,37 +1,26 @@
-import * as Y from 'yjs'
-import { afterEach, beforeEach, expect, test as baseTest, vi } from 'vitest'
+import { afterEach, beforeEach, expect, vi } from 'vitest'
 import {
 	HttpProvider,
 	MAX_INTERVAL_BETWEEN_SYNCS,
 	messageAwareness,
 } from '../src/y-http'
 import { DummyServer } from './DummyServer.ts'
-import { mockClient } from './mockClient.ts'
-import { updateDoc, docWith, updateAwareness, randomFileId, MAX_DELAY } from './helpers.ts'
+import { updateDoc, docWith, updateAwareness, MAX_DELAY } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
+import { providerTest, useProvider } from './providerTest.ts'
 
-interface ProvidersFixture {
-	fileId: number
-	server: DummyServer
+interface MultipleProviderFixture {
+	otherProvider: HttpProvider
 	providers: HttpProvider[]
-	provider: HttpProvider
+	server: DummyServer
 }
 
-const test = baseTest.extend<ProvidersFixture>({
-	fileId: ({ task: _ }, use) => use(randomFileId()),
-	server: ({ task: _ }, use) => use(new DummyServer()),
-	providers: async ({ fileId, server }, use) => {
-		const providers: HttpProvider[] = [
-			new HttpProvider(new Y.Doc(), mockClient(fileId, server )),
-			new HttpProvider(new Y.Doc(), mockClient(fileId, server )),
-		]
-		await use(providers)
-		providers.forEach((p) => p.destroy)
-	},
-	provider: async ({ providers }, use) => {
-		await use(providers[0])
-	},
+const test = providerTest.extend<MultipleProviderFixture>({
+	server: ({ backend }, use) => use(backend as DummyServer),
+	otherProvider: useProvider,
+	providers: ({ provider, otherProvider }, use) => use([provider, otherProvider]),
 })
+test.scoped({ backend: new DummyServer() })
 
 beforeEach(() => {
 	vi.useFakeTimers()
