@@ -108,14 +108,13 @@ export class HttpProvider extends ObservableV2<Events> {
 		if (!this.connection) {
 			return
 		}
-		const now = Date.now()
 		const data = {
 			sync: this.syncUpdate,
 			awareness: this.awarenessUpdate,
 			clientId: this.doc.clientID,
 		}
+		this.#lastSync = Date.now()
 		const response = await this.client.sync(this.connection, data)
-		this.#lastSync = now
 		const messages: string[] = [
 			...response.sync,
 			...Object.values(response.awareness),

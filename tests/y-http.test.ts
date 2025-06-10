@@ -10,20 +10,21 @@ import { mockClient } from './mockClient.ts'
 import { updateDoc, docWith, updateAwareness, randomFileId, MAX_DELAY } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
 
-interface ProviderFixture {
+interface ProvidersFixture {
 	fileId: number
 	server: DummyServer
 	providers: HttpProvider[]
 	provider: HttpProvider
 }
 
-const test = baseTest.extend<ProviderFixture>({
+const test = baseTest.extend<ProvidersFixture>({
 	fileId: ({ task: _ }, use) => use(randomFileId()),
 	server: ({ task: _ }, use) => use(new DummyServer()),
 	providers: async ({ fileId, server }, use) => {
-		const providers: HttpProvider[] = []
-		providers.push(new HttpProvider(new Y.Doc(), mockClient({ server, fileId })))
-		providers.push(new HttpProvider(new Y.Doc(), mockClient({ server, fileId })))
+		const providers: HttpProvider[] = [
+			new HttpProvider(new Y.Doc(), mockClient(fileId, server )),
+			new HttpProvider(new Y.Doc(), mockClient(fileId, server )),
+		]
 		await use(providers)
 		providers.forEach((p) => p.destroy)
 	},
