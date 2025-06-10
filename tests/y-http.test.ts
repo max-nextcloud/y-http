@@ -47,7 +47,7 @@ test('Instantiating the provider with a doc', ({ provider }) => {
 
 test('exposes sync updates', ({ provider }) => {
 	updateDoc(provider)
-	expect(docWith([provider.syncUpdate])).toEqual(provider.doc)
+	expect(docWith(provider.syncUpdate)).toEqual(provider.doc)
 })
 
 test('exposes awareness message', ({ provider }) => {

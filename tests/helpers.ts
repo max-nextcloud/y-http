@@ -13,7 +13,7 @@ export function randomDelay() {
 	})
 }
 
-export function docWith(updates: string[]): Y.Doc {
+export function docWith(...updates: string[]): Y.Doc {
 	const dest = new Y.Doc()
 	updates.forEach((u) => receive(dest, u))
 	return dest

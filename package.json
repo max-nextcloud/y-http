@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "fix": "prettier -w .",
     "lint": "oxlint",
     "test": "oxlint && vitest run && prettier -c ."
   },

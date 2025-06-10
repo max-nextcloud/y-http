@@ -3,23 +3,23 @@ import { randomDelay } from './helpers.ts'
 
 export class DummyServer {
 	#fileId?: number
-	syncMap = new Map<number, string[]>()
+	syncMap = new Map<number, string>()
 	awarenessMap = new Map<number, string>()
 	version = 0
 
 	seed(...sync: string[]) {
-		sync.forEach(str => {
+		sync.forEach((str) => {
 			this.version += Math.floor(Math.random() * 100)
-			this.syncMap.set(this.version, [str])
+			this.syncMap.set(this.version, str)
 		})
 	}
 
 	receive(
 		con: { fileId?: number },
-		data: { sync: string[]; awareness: string; clientId: number },
+		data: { sync: string; awareness: string; clientId: number },
 	) {
 		this.#checkConnection(con)
-		if (data.sync[0]) {
+		if (data.sync) {
 			this.version += Math.floor(Math.random() * 100)
 			this.syncMap.set(this.version, data.sync)
 		}
@@ -48,5 +48,4 @@ export class DummyServer {
 			throw new Error('Inconsistent file ids in dummy storage')
 		}
 	}
-
 }

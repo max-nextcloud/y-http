@@ -29,7 +29,7 @@ export interface YHttpClient {
 	open: (clientId: number) => Promise<Connection>
 	sync: (
 		connection: Connection,
-		data: { sync: string[]; awareness: string; clientId: number },
+		data: { sync: string; awareness: string; clientId: number },
 	) => Promise<SyncResponse>
 }
 
@@ -110,7 +110,7 @@ export class HttpProvider extends ObservableV2<Events> {
 		}
 		const now = Date.now()
 		const data = {
-			sync: [this.syncUpdate],
+			sync: this.syncUpdate,
 			awareness: this.awarenessUpdate,
 			clientId: this.doc.clientID,
 		}
