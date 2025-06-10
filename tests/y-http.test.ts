@@ -7,7 +7,7 @@ import {
 } from '../src/y-http'
 import { DummyServer } from './DummyServer.ts'
 import { mockClient } from './mockClient.ts'
-import { updateDoc, docWith, updateAwareness, randomFileId } from './helpers.ts'
+import { updateDoc, docWith, updateAwareness, randomFileId, MAX_DELAY } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
 
 interface ProviderFixture {
@@ -59,7 +59,7 @@ test('exposes awareness message', ({ provider }) => {
 test('tracks version from sync', async ({ provider, server }) => {
 	updateDoc(provider)
 	await provider.connect()
-	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	await vi.advanceTimersByTimeAsync(MAX_DELAY)
 	expect(provider.version).toBeGreaterThan(0)
 	expect(provider.version).toBe(server.version)
 })
@@ -71,8 +71,7 @@ test('applies updates received from sync', async ({ server, provider }) => {
 	)
 	provider.connect()
 	updateDoc(provider)
-	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
-	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	await vi.advanceTimersByTimeAsync(MAX_DELAY)
 	expect(provider.doc.getXmlFragment('default')).toMatchInlineSnapshot(
 		`"<paragraph>Hi</paragraph>"`,
 	)
@@ -82,7 +81,7 @@ test('syncs docs via server within one interval', async ({ providers }) => {
 	providers.map(updateDoc)
 	providers.forEach((p) => p.connect())
 	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
-	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	await vi.advanceTimersByTimeAsync(MAX_DELAY)
 	expect(providers[1].doc).toEqual(providers[0].doc)
 })
 
@@ -90,7 +89,7 @@ test('syncs awareness via server on connection', async ({ providers }) => {
 	providers.map(updateAwareness)
 	providers.forEach((p) => p.connect())
 	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
-	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	await vi.advanceTimersByTimeAsync(MAX_DELAY)
 	expect(providers[1].awareness.getStates().size).toEqual(2)
 	expect(providers[1].awareness.getStates()).toEqual(
 		providers[0].awareness.getStates(),

@@ -6,10 +6,12 @@ import { createDecoder, readUint8 } from 'lib0/decoding.js'
 import { HttpProvider, messageSync } from '../src/y-http.ts'
 import { Awareness } from 'y-protocols/awareness.js'
 
+export const MAX_DELAY = 100
+
 // continue after up to 100ms
 export function randomDelay() {
 	return new Promise((resolve) => {
-		setTimeout(resolve, Math.random() * 100)
+		setTimeout(resolve, Math.random() * MAX_DELAY)
 	})
 }
 
