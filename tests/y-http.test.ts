@@ -17,11 +17,9 @@ interface ProviderFixture {
 	provider: HttpProvider
 }
 
-const _server = new DummyServer()
-
 const test = baseTest.extend<ProviderFixture>({
 	fileId: ({ task: _ }, use) => use(randomFileId()),
-	server: ({ task: _ }, use) => use(_server),
+	server: ({ task: _ }, use) => use(new DummyServer()),
 	providers: async ({ fileId, server }, use) => {
 		const providers: HttpProvider[] = []
 		providers.push(new HttpProvider(new Y.Doc(), mockClient({ server, fileId })))
@@ -58,12 +56,12 @@ test('exposes awareness message', ({ provider }) => {
 	expect(message[0]).toBe(messageAwareness)
 })
 
-test('tracks version from sync', async ({ provider, server, fileId }) => {
+test('tracks version from sync', async ({ provider, server }) => {
 	updateDoc(provider)
 	await provider.connect()
 	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
 	expect(provider.version).toBeGreaterThan(0)
-	expect(provider.version).toBe(server.versions.get(fileId))
+	expect(provider.version).toBe(server.version)
 })
 
 test('applies updates received from sync', async ({ server, provider }) => {

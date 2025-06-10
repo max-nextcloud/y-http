@@ -2,55 +2,44 @@ import { SyncResponse } from '../src/y-http.ts'
 import { randomDelay } from './helpers.ts'
 
 export class DummyServer {
-	syncStorage = new Map<number, Map<number, string[]>>()
-	awarenessStorage = new Map<number, Map<number, string>>()
-	versions = new Map<number, number>()
+	#fileId?: number
+	syncMap = new Map<number, string[]>()
+	awarenessMap = new Map<number, string>()
+	version = 0
 
 	receive(
 		con: { fileId?: number },
 		data: { sync: string[]; awareness: string; clientId: number },
 	) {
-		const syncMap = this.#sync(con)
-		const awarenessMap = this.#awareness(con)
+		this.#checkConnection(con)
 		if (data.sync[0]) {
-			const version = this.versions.get(con.fileId ?? 0) ?? 0
-			const newVersion = version + Math.floor(Math.random() * 100)
-			this.versions.set(con.fileId ?? 0, newVersion)
-			syncMap.set(newVersion, data.sync)
+			this.version += Math.floor(Math.random() * 100)
+			this.syncMap.set(this.version, data.sync)
 		}
-		awarenessMap.set(data.clientId, data.awareness)
+		this.awarenessMap.set(data.clientId, data.awareness)
 	}
 
 	async respond(con: { fileId?: number }, since: number): Promise<SyncResponse> {
-		const sync = Array.from(this.#sync(con).entries())
+		this.#checkConnection(con)
+		const sync = Array.from(this.syncMap.entries())
 			.filter(([id, _data]) => id >= since)
 			.map(([_id, data]) => data)
 			.flat()
-		const awareness = Object.fromEntries(this.#awareness(con))
-		const version = this.versions.get(con.fileId ?? 0) ?? 0
+		const awareness = Object.fromEntries(this.awarenessMap)
+		const version = this.version
 		await randomDelay()
 		return { sync, awareness, version }
 	}
 
-	#sync(con: { fileId?: number }): Map<number, string[]> {
-		const id = con.fileId ?? 0
-		const existing = this.syncStorage.get(id)
-		if (existing) {
-			return existing
+	/**
+	 * Ensure we always use the same file.
+	 * For the sake of simplicity DummyServer only handles one file.
+	 */
+	#checkConnection({ fileId = 0 }: { fileId?: number }) {
+		this.#fileId ??= fileId
+		if (this.#fileId != fileId) {
+			throw new Error('Inconsistent file ids in dummy storage')
 		}
-		const blank = new Map<number, string[]>()
-		this.syncStorage.set(id, blank)
-		return blank
 	}
 
-	#awareness(con: { fileId?: number }): Map<number, string> {
-		const id = con.fileId ?? 0
-		const existing = this.awarenessStorage.get(id)
-		if (existing) {
-			return existing
-		}
-		const blank = new Map<number, string>()
-		this.awarenessStorage.set(id, blank)
-		return blank
-	}
 }
