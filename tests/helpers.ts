@@ -38,9 +38,14 @@ export function updateDoc({ doc }: { doc: Y.Doc }) {
 
 export const randomFileId = () => Math.floor(Math.random() * 1_000_000)
 
-export function updateDocAndSync(provider: HttpProvider) {
+/**
+ * Wait for the sync to be ready, update doc and wait for sync to finish
+ * @param provider - provider to update the doc for
+ */
+export async function updateDocAndSync(provider: HttpProvider) {
+	await vi.advanceTimersByTimeAsync(MIN_INTERVAL_BETWEEN_SYNCS)
 	updateDoc(provider)
-	return waitForSync()
+	await vi.advanceTimersByTimeAsync(MAX_DELAY)
 }
 
 export function waitForSync() {

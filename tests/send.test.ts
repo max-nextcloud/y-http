@@ -44,12 +44,14 @@ test('sync empties syncUpdate', async ({ provider }) => {
 })
 
 test('receives only new updates', async ({ client, provider }) => {
-	updateDoc(provider)
 	await provider.connect()
 	await waitForSync()
-	expect(client.sync.mock.settledResults.at(0)?.value.sync.length).toBe(1)
 	await updateDocAndSync(provider)
-	expect(client.sync.mock.settledResults.at(1)?.value.sync.length).toBe(1)
+	await updateDocAndSync(provider)
+	await updateDocAndSync(provider)
+	const results = client.sync.mock.settledResults
+	expect(results.filter(({ value: { sync }}) => sync.length > 1)).toEqual([])
+	expect(results.filter(({ value: { sync }}) => sync.length === 1)).toHaveLength(3)
 })
 
 test('sends pending updates after connecting', async ({ client, provider }) => {
