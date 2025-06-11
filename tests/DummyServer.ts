@@ -1,4 +1,4 @@
-import { SyncResponse } from '../src/y-http.ts'
+import { SyncData, SyncResponse } from '../src/y-http.ts'
 import { Backend } from './mockClient.ts'
 
 export class DummyServer implements Backend{
@@ -13,15 +13,14 @@ export class DummyServer implements Backend{
 		})
 	}
 
-	async respondTo(req: { sync: string; awareness: string; clientId: number }): Promise<SyncResponse> {
-		const since = 0
+	async respondTo(req: SyncData): Promise<SyncResponse> {
 		if (req.sync) {
 			this.version += Math.floor(Math.random() * 100)
 			this.syncMap.set(this.version, req.sync)
 		}
 		this.awarenessMap.set(req.clientId, req.awareness)
 		const sync = Array.from(this.syncMap.entries())
-			.filter(([id, _data]) => id >= since)
+			.filter(([id, _data]) => id > req.version)
 			.map(([_id, data]) => data)
 			.flat()
 		const awareness = Object.fromEntries(this.awarenessMap)

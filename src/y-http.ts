@@ -27,10 +27,14 @@ interface Connection {
 
 export interface YHttpClient {
 	open: (clientId: number) => Promise<Connection>
-	sync: (
-		connection: Connection,
-		data: { sync: string; awareness: string; clientId: number },
-	) => Promise<SyncResponse>
+	sync: (connection: Connection, data: SyncData) => Promise<SyncResponse>
+}
+
+export interface SyncData {
+	sync: string
+	awareness: string
+	clientId: number
+	version: number
 }
 
 export interface SyncResponse {
@@ -112,6 +116,7 @@ export class HttpProvider extends ObservableV2<Events> {
 			sync: this.syncUpdate,
 			awareness: this.awarenessUpdate,
 			clientId: this.doc.clientID,
+			version: this.version
 		}
 		this.#lastSync = Date.now()
 		const response = await this.client.sync(this.connection, data)

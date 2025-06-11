@@ -1,9 +1,9 @@
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
 import * as Y from 'yjs'
 import * as sync from 'y-protocols/sync'
 import { fromBase64 } from 'lib0/buffer.js'
 import { createDecoder, readUint8 } from 'lib0/decoding.js'
-import { HttpProvider, messageSync } from '../src/y-http.ts'
+import { HttpProvider, messageSync, MIN_INTERVAL_BETWEEN_SYNCS } from '../src/y-http.ts'
 import { Awareness } from 'y-protocols/awareness.js'
 
 export const MAX_DELAY = 100
@@ -40,19 +40,12 @@ export const randomFileId = () => Math.floor(Math.random() * 1_000_000)
 
 export function updateDocAndSync(provider: HttpProvider) {
 	updateDoc(provider)
-	return waitForSync(provider)
+	return waitForSync()
 }
 
-export function waitForSync(provider: HttpProvider) {
-	return new Promise<void>((resolve) => {
-		function onSync(state) {
-			if (state) {
-				provider.off('sync', onSync)
-				resolve()
-			}
-		}
-		provider.on('sync', onSync)
-	})
+export function waitForSync() {
+	// wait for client to be ready to send again and the response.
+	return vi.advanceTimersByTimeAsync(MIN_INTERVAL_BETWEEN_SYNCS + MAX_DELAY)
 }
 
 let _pos = 123

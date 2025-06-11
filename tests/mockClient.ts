@@ -1,21 +1,9 @@
 import { vi, expect } from 'vitest'
 import { randomDelay } from './helpers.ts'
-import type { YHttpClient } from '../src/y-http.ts'
-
-interface Request {
-    sync: string
-	awareness: string
-	clientId: number
-}
-
-interface Response {
-	sync: string[]
-	awareness: {}
-	version: number
-}
+import type { SyncData, SyncResponse, YHttpClient } from '../src/y-http.ts'
 
 export interface Backend {
-	respondTo: (req: Request) => Promise<Response>
+	respondTo: (req: SyncData) => Promise<SyncResponse>
 }
 
 export function mockClient(fileId: number, server: Backend) {

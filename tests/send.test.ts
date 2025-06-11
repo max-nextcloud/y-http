@@ -4,13 +4,13 @@ import {
 	messageAwareness,
 	MIN_INTERVAL_BETWEEN_SYNCS,
 } from '../src/y-http'
-import { updateDoc, docWith, updateAwareness, MAX_DELAY } from './helpers.ts'
+import { updateDoc, docWith, updateAwareness, MAX_DELAY, waitForSync, updateDocAndSync } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
 import { DummyServer } from './DummyServer.ts'
 import { providerTest } from './providerTest.ts'
 
 const test = providerTest
-test.scoped({ backend: new DummyServer() })
+test.scoped({ backend: ( { task: _ }, use ) => use(new DummyServer()) })
 
 beforeEach(() => {
 	vi.useFakeTimers()
@@ -22,19 +22,29 @@ afterEach(() => {
 
 test('sends updates', async ({ client, provider }) => {
 	await provider.connect()
-	updateDoc(provider)
 	vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
+	updateDoc(provider)
 	expect(client.sync).toHaveBeenCalledWith(provider.connection, {
 		sync: provider.syncUpdate,
 		awareness: provider.awarenessUpdate,
 		clientId: provider.doc.clientID,
+		version: 0,
 	})
 	const sync = client.sync.mock.lastCall?.[1].sync ?? ''
 	expect(docWith(sync)).toEqual(provider.doc)
 	expect(provider.syncUpdate).not.toBe('')
-	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	// receive the response...
 	await vi.advanceTimersByTimeAsync(MAX_DELAY)
 	expect(provider.syncUpdate).toBe('')
+})
+
+test('receives only new updates', async ({ client, provider }) => {
+	updateDoc(provider)
+	await provider.connect()
+	await waitForSync()
+	expect(client.sync.mock.settledResults.at(0)?.value.sync.length).toBe(1)
+	await updateDocAndSync(provider)
+	expect(client.sync.mock.settledResults.at(1)?.value.sync.length).toBe(1)
 })
 
 test('sends pending updates after connecting', async ({ client, provider }) => {
@@ -46,6 +56,7 @@ test('sends pending updates after connecting', async ({ client, provider }) => {
 		sync: provider.syncUpdate,
 		awareness: provider.awarenessUpdate,
 		clientId: provider.doc.clientID,
+		version: 0,
 	})
 })
 
