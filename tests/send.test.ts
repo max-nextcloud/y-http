@@ -4,7 +4,7 @@ import {
 	messageAwareness,
 	MIN_INTERVAL_BETWEEN_SYNCS,
 } from '../src/y-http'
-import { updateDoc, docWith, updateAwareness, MAX_DELAY, waitForSync, updateDocAndSync } from './helpers.ts'
+import { updateDoc, docWith, updateAwareness, waitForSync, updateDocAndSync } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
 import { DummyServer } from './DummyServer.ts'
 import { providerTest } from './providerTest.ts'
@@ -22,7 +22,7 @@ afterEach(() => {
 
 test('sends updates', async ({ client, provider }) => {
 	await provider.connect()
-	vi.advanceTimersByTime(MIN_INTERVAL_BETWEEN_SYNCS)
+	await waitForSync()
 	updateDoc(provider)
 	expect(client.sync).toHaveBeenCalledWith(provider.connection, {
 		sync: provider.syncUpdate,
@@ -32,9 +32,14 @@ test('sends updates', async ({ client, provider }) => {
 	})
 	const sync = client.sync.mock.lastCall?.[1].sync ?? ''
 	expect(docWith(sync)).toEqual(provider.doc)
+})
+
+test('sync empties syncUpdate', async ({ provider }) => {
+	await provider.connect()
+	await waitForSync()
+	updateDoc(provider)
 	expect(provider.syncUpdate).not.toBe('')
-	// receive the response...
-	await vi.advanceTimersByTimeAsync(MAX_DELAY)
+	await waitForSync()
 	expect(provider.syncUpdate).toBe('')
 })
 
@@ -73,7 +78,7 @@ test('include an awareness message', async ({ client, provider }) => {
 
 Object.entries({ doc: updateDoc, awareness: updateAwareness }).forEach(
 	([key, updateFn]) => {
-		test(`${key} changes trigger sync with interval`, async ({ client, provider }) => {
+		test(`${key} changes trigger sync after interval`, async ({ client, provider }) => {
 			await provider.connect()
 			expect(client.sync).toHaveBeenCalledTimes(1)
 			updateFn(provider)
