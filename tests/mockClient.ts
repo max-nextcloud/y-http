@@ -7,14 +7,14 @@ export interface Backend {
 }
 
 type YHttpClientMock = YHttpClient & {
-	sync: Mock<YHttpClient["sync"]>,
-	open: Mock<YHttpClient["open"]>
-	close: Mock<YHttpClient["close"]>
+	sync: Mock<YHttpClient['sync']>
+	open: Mock<YHttpClient['open']>
+	close: Mock<YHttpClient['close']>
 }
 
 export function mockClient(fileId: number, server: Backend): YHttpClientMock {
 	const open = vi.fn(async (_) => ({ fileId }))
-	const close = vi.fn(async (_) => ({ }))
+	const close = vi.fn(async (_) => ({}))
 	const sync = vi.fn(async (con, data) => {
 		expect(con.fileId).toBe(fileId)
 		await randomDelay()

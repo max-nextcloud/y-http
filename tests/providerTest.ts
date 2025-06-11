@@ -6,7 +6,7 @@ import { Doc } from 'yjs'
 
 interface ProviderFixture {
 	fileId: number
-	client: { sync: Mock<YHttpClient["sync"]>, open: Mock<YHttpClient["open"]> }
+	client: { sync: Mock<YHttpClient['sync']>; open: Mock<YHttpClient['open']> }
 	provider: HttpProvider
 	backend: Backend
 }
@@ -29,5 +29,5 @@ const nullBackend: Backend = {
 		sync: [],
 		awareness: {},
 		version: 0,
-	}))
+	})),
 }

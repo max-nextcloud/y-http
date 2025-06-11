@@ -3,7 +3,11 @@ import * as Y from 'yjs'
 import * as sync from 'y-protocols/sync'
 import { fromBase64 } from 'lib0/buffer.js'
 import { createDecoder, readUint8 } from 'lib0/decoding.js'
-import { HttpProvider, messageSync, MIN_INTERVAL_BETWEEN_SYNCS } from '../src/y-http.ts'
+import {
+	HttpProvider,
+	messageSync,
+	MIN_INTERVAL_BETWEEN_SYNCS,
+} from '../src/y-http.ts'
 import { Awareness } from 'y-protocols/awareness.js'
 
 export const MAX_DELAY = 100

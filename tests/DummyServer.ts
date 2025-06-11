@@ -1,7 +1,7 @@
 import { SyncData, SyncResponse } from '../src/y-http.ts'
 import { Backend } from './mockClient.ts'
 
-export class DummyServer implements Backend{
+export class DummyServer implements Backend {
 	syncMap = new Map<number, string>()
 	awarenessMap = new Map<number, string>()
 	version = 0

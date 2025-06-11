@@ -117,7 +117,7 @@ export class HttpProvider extends ObservableV2<Events> {
 			sync: this.syncUpdate,
 			awareness: this.awarenessUpdate,
 			clientId: this.doc.clientID,
-			version: this.version
+			version: this.version,
 		}
 		this.#lastSync = Date.now()
 		const response = await this.client.sync(this.connection, data)
