@@ -12,7 +12,7 @@ interface ProviderFixture {
 }
 
 export const providerTest = baseTest.extend<ProviderFixture>({
-	fileId: randomFileId(),
+	fileId: ({ task: _ }, use) => use(randomFileId()),
 	backend: ({ task: _ }, use) => use(nullBackend),
 	client: ({ fileId, backend }, use) => use(mockClient(fileId, backend)),
 	provider: useProvider,

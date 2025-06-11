@@ -1,8 +1,10 @@
 import * as Y from 'yjs'
 import * as sync from 'y-protocols/sync'
 import { createEncoder, toUint8Array, writeUint8 } from 'lib0/encoding.js'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { toBase64 } from 'lib0/buffer.js'
+import { Awareness } from 'y-protocols/awareness.js'
+import * as time from 'lib0/time.js'
 
 beforeEach(() => vi.resetAllMocks())
 
@@ -60,6 +62,42 @@ test('using send with y-protocols', () => {
 	expect(send).toHaveBeenCalled()
 	const data = send.mock.lastCall?.[0]
 	expect(data.slice(0, 3)).toMatchInlineSnapshot(`"AAI"`)
+})
+
+describe('awareness', () => {
+	beforeEach(() => {
+		vi.useFakeTimers()
+	})
+
+	afterEach(() => {
+		vi.useRealTimers()
+	})
+
+	test('awareness auto updates', async () => {
+		const before = time.getUnixTime()
+		console.log({ before })
+		const doc = new Y.Doc()
+		expect(vi.getTimerCount()).toBe(0)
+		const awareness = new Awareness(doc)
+		expect(vi.getTimerCount()).toBe(1)
+		const spy = vi.spyOn(awareness, 'setLocalState')
+		expect(awareness._checkInterval).toBeTruthy()
+		awareness.setLocalState({ hello: 'there' })
+		expect(spy).toHaveBeenCalledTimes(1)
+		const previous = awareness.meta.get(doc.clientID)?.clock ?? 0
+		expect(previous).toBeGreaterThan(0)
+		await vi.advanceTimersByTimeAsync(20_000)
+		expect(spy).toHaveBeenCalledTimes(2)
+		expect(awareness.meta.get(doc.clientID)?.clock).toBeGreaterThan(previous)
+	})
+
+	test('lib0 time', () => {
+		const before = time.getUnixTime()
+		const beforeM = vi.getMockedSystemTime()?.valueOf() ?? 0
+		vi.advanceTimersByTime(1000)
+		expect(vi.getMockedSystemTime()?.valueOf()).toBeGreaterThan(beforeM + 999)
+		expect(time.getUnixTime()).toBeGreaterThan(before + 999)
+	})
 })
 
 let _updateCount = 0

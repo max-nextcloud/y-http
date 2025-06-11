@@ -18,6 +18,7 @@ import {
 	applyAwarenessUpdate,
 	Awareness,
 	encodeAwarenessUpdate,
+	outdatedTimeout,
 } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
@@ -56,8 +57,8 @@ export const messageQueryAwareness = 3
 
 // throttle requests to at most 5 per second
 export const MIN_INTERVAL_BETWEEN_SYNCS = 200 // milliseconds
-// ensure connected users remain in awareness state
-export const MAX_INTERVAL_BETWEEN_SYNCS = 10_000 // milliseconds
+// The awareness state autoupdates every 15 seconds.
+export const MAX_INTERVAL_BETWEEN_SYNCS = outdatedTimeout / 2
 
 export class HttpProvider extends ObservableV2<Events> {
 	doc: Y.Doc
@@ -67,7 +68,6 @@ export class HttpProvider extends ObservableV2<Events> {
 	connection?: Connection
 	#lastSync = 0
 	#pendingSync = 0
-	#awarenessInterval = 0
 	awareness: Awareness
 	#messageHandlers: ((this: HttpProvider, dec: Decoder) => void)[] = []
 	_synced = false
@@ -91,10 +91,6 @@ export class HttpProvider extends ObservableV2<Events> {
 		})
 		this.#messageHandlers[messageSync] = this.#handleSyncMessage
 		this.#messageHandlers[messageAwareness] = this.#handleAwarenessMessage
-		this.#awarenessInterval = setInterval(
-			this.#triggerSync.bind(this),
-			MAX_INTERVAL_BETWEEN_SYNCS,
-		)
 	}
 
 	#triggerSync() {
@@ -210,7 +206,5 @@ export class HttpProvider extends ObservableV2<Events> {
 		this.connection = undefined
 	}
 
-	destroy(): void {
-		clearInterval(this.#awarenessInterval)
-	}
+	destroy(): void {}
 }

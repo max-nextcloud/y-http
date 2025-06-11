@@ -20,7 +20,7 @@ const test = providerTest.extend<MultipleProviderFixture>({
 	otherProvider: useProvider,
 	providers: ({ provider, otherProvider }, use) => use([provider, otherProvider]),
 })
-test.scoped({ backend: new DummyServer() })
+test.scoped({ backend: ({ task: _ }, use) => use(new DummyServer()) })
 
 beforeEach(() => {
 	vi.useFakeTimers()
@@ -28,6 +28,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.restoreAllMocks()
+	vi.useRealTimers()
 })
 
 test('Instantiating the provider with a doc', ({ provider }) => {

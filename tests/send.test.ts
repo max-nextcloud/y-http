@@ -24,6 +24,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.restoreAllMocks()
+	vi.useRealTimers()
 })
 
 test('sends updates', async ({ client, provider }) => {
@@ -103,11 +104,13 @@ Object.entries({ doc: updateDoc, awareness: updateAwareness }).forEach(
 	},
 )
 
-test('sends awareness update every 10 seconds', async ({ client, provider }) => {
+test('sends awareness updates regularly', async ({ client, provider }) => {
 	updateAwareness(provider)
+	const a = { ...provider.awareness.meta }
 	await provider.connect()
 	expect(client.sync).toHaveBeenCalledTimes(1)
-	vi.advanceTimersByTime(MAX_INTERVAL_BETWEEN_SYNCS)
+	await vi.advanceTimersByTimeAsync(MAX_INTERVAL_BETWEEN_SYNCS)
+	expect(provider.awareness.meta).not.toEqual(a)
 	expect(client.sync).toHaveBeenCalledTimes(2)
 	const { awareness, sync } = client.sync.mock.lastCall?.[1] ?? {}
 	// awareness update only
