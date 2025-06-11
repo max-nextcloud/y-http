@@ -26,3 +26,14 @@ test('emit error when failing to connect', async ({ client, provider }) => {
 	expect(onErr).toHaveBeenCalled()
 	expect(onErr.mock.lastCall).toEqual([err, provider])
 })
+
+test('disconnect without connect returns', async ({ provider }) => {
+	await provider.disconnect()
+	expect(provider.connection).toBeFalsy()
+})
+
+test('clears connection on disconnect', async ({ provider }) => {
+	await provider.connect()
+	await provider.disconnect()
+	expect(provider.connection).toBeFalsy()
+})

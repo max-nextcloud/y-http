@@ -28,6 +28,7 @@ interface Connection {
 export interface YHttpClient {
 	open: (clientId: number) => Promise<Connection>
 	sync: (connection: Connection, data: SyncData) => Promise<SyncResponse>
+	close: (connection: Connection) => Promise<{}>
 }
 
 export interface SyncData {
@@ -197,6 +198,16 @@ export class HttpProvider extends ObservableV2<Events> {
 		})
 		this.#sync()
 		return this.connection
+	}
+
+	async disconnect() {
+		if (!this.connection) {
+			return
+		}
+		await this.client.close(this.connection).catch((err) => {
+			this.emit('connection-error', [err, this])
+		})
+		this.connection = undefined
 	}
 
 	destroy(): void {
