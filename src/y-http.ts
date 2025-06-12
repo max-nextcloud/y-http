@@ -37,6 +37,7 @@ export interface SyncData {
 	awareness: string
 	clientId: number
 	version: number
+	connection: Connection
 }
 
 export interface SyncResponse {
@@ -114,6 +115,7 @@ export class HttpProvider extends ObservableV2<Events> {
 			awareness: this.awarenessUpdate,
 			clientId: this.doc.clientID,
 			version: this.version,
+			connection: this.connection,
 		}
 		this.#lastSync = Date.now()
 		const response = await this.client.sync(this.connection, data)

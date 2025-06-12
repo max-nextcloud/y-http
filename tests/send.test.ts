@@ -35,6 +35,7 @@ test('sends updates', async ({ client, provider }) => {
 		sync: provider.syncUpdate,
 		awareness: provider.awarenessUpdate,
 		clientId: provider.doc.clientID,
+		connection: provider.connection,
 		version: 0,
 	})
 	const sync = client.sync.mock.lastCall?.[1].sync ?? ''
@@ -72,6 +73,7 @@ test('sends pending updates after connecting', async ({ client, provider }) => {
 		sync: provider.syncUpdate,
 		awareness: provider.awarenessUpdate,
 		clientId: provider.doc.clientID,
+		connection: provider.connection,
 		version: 0,
 	})
 })

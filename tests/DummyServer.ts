@@ -5,6 +5,7 @@ export class DummyServer implements Backend {
 	syncMap = new Map<number, string>()
 	awarenessMap = new Map<number, string>()
 	version = 0
+	fileId? : number
 
 	seed(...sync: string[]) {
 		sync.forEach((str) => {
@@ -14,6 +15,10 @@ export class DummyServer implements Backend {
 	}
 
 	async respondTo(req: SyncData): Promise<SyncResponse> {
+		this.fileId ??= req.connection.fileId
+		if (this.fileId !== req.connection.fileId) {
+			throw new Error('Dummy server can only serve one file')
+		}
 		if (req.sync) {
 			this.version += Math.floor(Math.random() * 100)
 			this.syncMap.set(this.version, req.sync)
