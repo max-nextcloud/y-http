@@ -37,3 +37,12 @@ test('clears connection on disconnect', async ({ provider }) => {
 	await provider.disconnect()
 	expect(provider.connection).toBeFalsy()
 })
+
+test('Recovers connection', async ({ provider, fileId }) => {
+	await provider.connect()
+	await provider.disconnect()
+	const connection = await provider.connect()
+	expect(provider.connection).toBe(connection)
+	expect(connection).toEqual({ fileId })
+	expect(connection).toEqual({ fileId })
+})
