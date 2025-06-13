@@ -22,12 +22,13 @@ import {
 } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
-interface Connection {
+export interface Connection {
 	fileId?: number
+	baseVersionEtag: string
 }
 
 export interface YHttpClient {
-	open: (clientId: number) => Promise<Connection>
+	open: (clientId: number, prev?: Connection) => Promise<Connection>
 	sync: (connection: Connection, data: SyncData) => Promise<SyncResponse>
 	close: (connection: Connection) => Promise<{}>
 }
@@ -37,7 +38,6 @@ export interface SyncData {
 	awareness: string
 	clientId: number
 	version: number
-	connection: Connection
 }
 
 export interface SyncResponse {
@@ -66,7 +66,8 @@ export class HttpProvider extends ObservableV2<Events> {
 	#remoteDoc: Y.Doc
 	client: YHttpClient
 	version = 0
-	connection?: Connection
+	#connection?: Connection
+	#isConnected = false
 	#lastSync = 0
 	#pendingSync = 0
 	awareness: Awareness
@@ -150,6 +151,10 @@ export class HttpProvider extends ObservableV2<Events> {
 		applyAwarenessUpdate(this.awareness, readVarUint8Array(dec), this)
 	}
 
+	get connection() {
+		return this.#isConnected ? this.#connection : undefined
+	}
+
 	get synced() {
 		return this._synced
 	}
@@ -190,12 +195,15 @@ export class HttpProvider extends ObservableV2<Events> {
 	}
 
 	async connect(): Promise<Connection> {
-		this.connection = await this.client.open(this.doc.clientID).catch((err) => {
-			this.emit('connection-error', [err, this])
-			throw err
-		})
+		this.#connection = await this.client
+			.open(this.doc.clientID, this.#connection)
+			.catch((err) => {
+				this.emit('connection-error', [err, this])
+				throw err
+			})
+		this.#isConnected = true
 		this.#sync()
-		return this.connection
+		return this.#connection
 	}
 
 	async disconnect() {
@@ -205,7 +213,8 @@ export class HttpProvider extends ObservableV2<Events> {
 		await this.client.close(this.connection).catch((err) => {
 			this.emit('connection-error', [err, this])
 		})
-		this.connection = undefined
+		// we keep the connection around so we can hand it to the reconnect attempt.
+		this.#isConnected = false
 	}
 
 	destroy(): void {}

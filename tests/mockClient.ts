@@ -13,7 +13,7 @@ type YHttpClientMock = YHttpClient & {
 }
 
 export function mockClient(fileId: number, server: Backend): YHttpClientMock {
-	const open = vi.fn(async (_) => ({ fileId }))
+	const open = vi.fn(async (_) => ({ fileId, baseVersionEtag: 'etag' }))
 	const close = vi.fn(async (_) => ({}))
 	const sync = vi.fn(async (con, data) => {
 		expect(con.fileId).toBe(fileId)
