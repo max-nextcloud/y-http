@@ -5,8 +5,6 @@ export default defineConfig({
   build: {
     lib: {
       entry: `${__dirname}/src/y-http.ts`,
-      name: 'y-http',
-      fileName: 'y-http',
 	  formats: ['es'],
     },
     rollupOptions: {

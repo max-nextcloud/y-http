@@ -4,11 +4,11 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/y-http.d.ts",
+      "import": "./dist/y-http.js"
 	}
   },
-  "types": "dist/index.d.ts",
+  "types": "dist/y-http.d.ts",
   "files": ["dist"],
   "scripts": {
     "build": "vite --mode production build",
