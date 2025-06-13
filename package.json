@@ -1,9 +1,18 @@
 {
-  "name": "y-http",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@nextcloud/y-http",
+  "version": "0.1.0",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+	}
+  },
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
   "scripts": {
+    "build": "vite --mode production build",
+    "dev": "vite --mode development build --watch",
     "fix": "prettier -w .",
     "lint": "oxlint",
     "test": "oxlint && vitest run && prettier -c ."
@@ -18,6 +27,7 @@
     "@nextcloud/prettier-config": "^1.2.0",
     "oxlint": "^0.18.0",
     "typescript": "~5.7.2",
+    "vite-plugin-dts": "^4.5.4",
     "vitest": "^3.1.2"
   }
 }
