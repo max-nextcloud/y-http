@@ -6,10 +6,12 @@
     ".": {
       "types": "./dist/y-http.d.ts",
       "import": "./dist/y-http.js"
-	}
+    }
   },
   "types": "dist/y-http.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "vite --mode production build",
     "dev": "vite --mode development build --watch",

@@ -5,7 +5,7 @@ export class DummyServer implements Backend {
 	syncMap = new Map<number, string>()
 	awarenessMap = new Map<number, string>()
 	version = 0
-	fileId? : number
+	fileId?: number
 
 	seed(...sync: string[]) {
 		sync.forEach((str) => {
