@@ -6,14 +6,18 @@ export interface Backend {
 	respondTo: (req: SyncData) => Promise<SyncResponse>
 }
 
-type YHttpClientMock = YHttpClient & {
-	sync: Mock<YHttpClient['sync']>
-	open: Mock<YHttpClient['open']>
-	close: Mock<YHttpClient['close']>
+export interface DummyConnection {
+	fileId: number
+}
+
+type YHttpClientMock = YHttpClient<DummyConnection> & {
+	sync: Mock<YHttpClient<DummyConnection>['sync']>
+	open: Mock<YHttpClient<DummyConnection>['open']>
+	close: Mock<YHttpClient<DummyConnection>['close']>
 }
 
 export function mockClient(fileId: number, server: Backend): YHttpClientMock {
-	const open = vi.fn(async (_) => ({ fileId, baseVersionEtag: 'etag' }))
+	const open = vi.fn(async (_) => ({ connection: { fileId }, data: {} }))
 	const close = vi.fn(async (_) => ({}))
 	const sync = vi.fn(async (con, data) => {
 		expect(con.fileId).toBe(fileId)

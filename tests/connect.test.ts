@@ -8,14 +8,13 @@ beforeEach(() => vi.resetAllMocks())
 test('connect using the client', ({ provider, client }) => {
 	provider.connect()
 	expect(client.open).toHaveBeenCalled()
-	expect(client.open.mock.lastCall)
-		.toEqual([provider.doc.clientID, undefined])
+	expect(client.open.mock.lastCall).toEqual([provider.doc.clientID, undefined])
 })
 
 test('exposes connection', async ({ provider, fileId }) => {
-	const connection = await provider.connect()
+	const { connection } = await provider.connect()
 	expect(provider.connection).toBe(connection)
-	expect(connection).toEqual({ fileId, baseVersionEtag: expect.any(String) })
+	expect(connection).toEqual({ fileId })
 })
 
 test('emit error when failing to connect', async ({ client, provider }) => {
@@ -42,9 +41,8 @@ test('clears connection on disconnect', async ({ provider }) => {
 test('Recovers connection', async ({ client, provider, fileId }) => {
 	await provider.connect()
 	await provider.disconnect()
-	const connection = await provider.connect()
-	expect(client.open.mock.lastCall)
-		.toEqual([provider.doc.clientID, connection])
+	const { connection } = await provider.connect()
+	expect(client.open.mock.lastCall).toEqual([provider.doc.clientID, connection])
 	expect(provider.connection).toBe(connection)
-	expect(connection).toEqual({ fileId, baseVersionEtag: expect.any(String) })
+	expect(connection).toEqual({ fileId })
 })

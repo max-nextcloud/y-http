@@ -1,13 +1,16 @@
 import { type Mock, test as baseTest, vi } from 'vitest'
 import { type YHttpClient, HttpProvider } from '../src/y-http.ts'
 import { randomFileId } from './helpers.ts'
-import { Backend, mockClient } from './mockClient.ts'
+import { Backend, DummyConnection, mockClient } from './mockClient.ts'
 import { Doc } from 'yjs'
 
 interface ProviderFixture {
 	fileId: number
-	client: { sync: Mock<YHttpClient['sync']>; open: Mock<YHttpClient['open']> }
-	provider: HttpProvider
+	client: {
+		sync: Mock<YHttpClient<DummyConnection>['sync']>
+		open: Mock<YHttpClient<DummyConnection>['open']>
+	}
+	provider: HttpProvider<DummyConnection>
 	backend: Backend
 }
 

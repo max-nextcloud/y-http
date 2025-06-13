@@ -22,13 +22,11 @@ import {
 } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
-export interface Connection {
-	fileId?: number
-	baseVersionEtag: string
-}
-
-export interface YHttpClient {
-	open: (clientId: number, prev?: Connection) => Promise<Connection>
+export interface YHttpClient<Connection> {
+	open: (
+		params: {},
+		prev?: Connection,
+	) => Promise<{ connection: Connection; data: {} }>
 	sync: (connection: Connection, data: SyncData) => Promise<SyncResponse>
 	close: (connection: Connection) => Promise<{}>
 }
@@ -46,8 +44,8 @@ export interface SyncResponse {
 	version: number
 }
 
-interface Events {
-	'connection-error': (error: Error, provider: HttpProvider) => any
+interface Events<Connection> {
+	'connection-error': (error: Error, provider: HttpProvider<Connection>) => any
 	sync: (state: boolean) => any
 }
 
@@ -61,20 +59,20 @@ export const MIN_INTERVAL_BETWEEN_SYNCS = 200 // milliseconds
 // The awareness state autoupdates every 15 seconds.
 export const MAX_INTERVAL_BETWEEN_SYNCS = outdatedTimeout / 2
 
-export class HttpProvider extends ObservableV2<Events> {
+export class HttpProvider<Connection> extends ObservableV2<Events<Connection>> {
 	doc: Y.Doc
 	#remoteDoc: Y.Doc
-	client: YHttpClient
+	client: YHttpClient<Connection>
 	version = 0
 	#connection?: Connection
 	#isConnected = false
 	#lastSync = 0
 	#pendingSync = 0
 	awareness: Awareness
-	#messageHandlers: ((this: HttpProvider, dec: Decoder) => void)[] = []
+	#messageHandlers: ((this: HttpProvider<Connection>, dec: Decoder) => void)[] = []
 	_synced = false
 
-	constructor(doc: Y.Doc, client: YHttpClient) {
+	constructor(doc: Y.Doc, client: YHttpClient<Connection>) {
 		super()
 		this.doc = doc
 		this.awareness = new Awareness(doc)
@@ -194,16 +192,17 @@ export class HttpProvider extends ObservableV2<Events> {
 		return toBase64(arr)
 	}
 
-	async connect(): Promise<Connection> {
-		this.#connection = await this.client
+	async connect(): Promise<{ connection: Connection; data: {} }> {
+		const { connection, data } = await this.client
 			.open(this.doc.clientID, this.#connection)
 			.catch((err) => {
 				this.emit('connection-error', [err, this])
 				throw err
 			})
+		this.#connection = connection
 		this.#isConnected = true
 		this.#sync()
-		return this.#connection
+		return { connection, data }
 	}
 
 	async disconnect() {

@@ -8,10 +8,11 @@ import { DummyServer } from './DummyServer.ts'
 import { updateDoc, docWith, updateAwareness, MAX_DELAY } from './helpers.ts'
 import { fromBase64 } from 'lib0/buffer.js'
 import { providerTest, useProvider } from './providerTest.ts'
+import { DummyConnection } from './mockClient.ts'
 
 interface MultipleProviderFixture {
-	otherProvider: HttpProvider
-	providers: HttpProvider[]
+	otherProvider: HttpProvider<DummyConnection>
+	providers: HttpProvider<DummyConnection>[]
 	server: DummyServer
 }
 
