@@ -23,10 +23,7 @@ import {
 import * as Y from 'yjs'
 
 export interface YHttpClient<Connection> {
-	open: (
-		params: {},
-		prev?: Connection,
-	) => Promise<{ connection: Connection; data: {} }>
+	open: (prev?: Connection) => Promise<{ connection: Connection; data: {} }>
 	sync: (connection: Connection, data: SyncData) => Promise<SyncResponse>
 	close: (connection: Connection) => Promise<{}>
 }
@@ -194,7 +191,7 @@ export class HttpProvider<Connection> extends ObservableV2<Events<Connection>> {
 
 	async connect(): Promise<{ connection: Connection; data: {} }> {
 		const { connection, data } = await this.client
-			.open(this.doc.clientID, this.#connection)
+			.open(this.#connection)
 			.catch((err) => {
 				this.emit('connection-error', [err, this])
 				throw err

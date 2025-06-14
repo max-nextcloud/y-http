@@ -8,7 +8,7 @@ beforeEach(() => vi.resetAllMocks())
 test('connect using the client', ({ provider, client }) => {
 	provider.connect()
 	expect(client.open).toHaveBeenCalled()
-	expect(client.open.mock.lastCall).toEqual([provider.doc.clientID, undefined])
+	expect(client.open.mock.lastCall).toEqual([undefined])
 })
 
 test('exposes connection', async ({ provider, fileId }) => {
@@ -42,7 +42,7 @@ test('Recovers connection', async ({ client, provider, fileId }) => {
 	await provider.connect()
 	await provider.disconnect()
 	const { connection } = await provider.connect()
-	expect(client.open.mock.lastCall).toEqual([provider.doc.clientID, connection])
+	expect(client.open.mock.lastCall).toEqual([connection])
 	expect(provider.connection).toBe(connection)
 	expect(connection).toEqual({ fileId })
 })
